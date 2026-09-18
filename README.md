@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FinLens
 
-## Getting Started
+An AI-native financial news and market-events platform for retail investors. Next.js 16 + React 19 + TypeScript + Tailwind CSS, with editorial content (News, Agenda) managed through an embedded Sanity Studio.
 
-First, run the development server:
+## Running locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without any further setup, the app runs entirely on its built-in mock data (`src/lib/data/`) — nothing below is required just to browse the site.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Editing content (News & Agenda)
 
-## Learn More
+Content is managed through [Sanity](https://sanity.io), embedded directly in this app at **`/studio`** — no separate tool to install.
 
-To learn more about Next.js, take a look at the following resources:
+**One-time setup:**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Create a free account at [sanity.io](https://sanity.io) and a new project.
+2. Copy `.env.local.example` to `.env.local` and fill in `NEXT_PUBLIC_SANITY_PROJECT_ID` and `NEXT_PUBLIC_SANITY_DATASET` from your project's dashboard (neither is secret).
+3. Run `npm run dev`, visit `/studio`, and log in with your Sanity account. The first time, Sanity will ask you to approve `localhost:3000` as a CORS origin — click through that once.
+4. Optional but recommended: seed your Studio with the existing mock content as a starting point.
+   - Generate a token at [sanity.io/manage](https://sanity.io/manage) → your project → API → Tokens (**Editor** permission).
+   - Add `SANITY_WRITE_TOKEN=<your-token>` to `.env.local` (keep this one secret, unlike the two above).
+   - Run `npm run seed`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Day to day**: once configured, open `/studio` to create or edit News Articles and Market Events through proper forms (with validation, dropdowns for category/impact/assets, etc.). Changes appear on the live site immediately — News and Agenda detail pages are rendered on demand, not pre-built, so nothing needs to be redeployed.
 
-## Deploy on Vercel
+If Sanity isn't configured (or a fetch fails), the site automatically falls back to the built-in mock data — it never breaks.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Scope**: Sanity only manages editorial content (News, Agenda). Asset prices, the Watchlist, and user accounts are separate, still-mock pieces of the product — see the project's roadmap for what's planned next (Supabase for auth, a live news/market-data pipeline, etc.).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploying
+
+Not deployed yet. The recommended path is [Vercel](https://vercel.com) (same team as Next.js): connect the GitHub repo, add the `NEXT_PUBLIC_SANITY_*` environment variables in the Vercel project settings, and deploy. `SANITY_WRITE_TOKEN` is only needed locally for seeding and should not be set in the deployed environment.
+
+## Project structure
+
+- `src/app/(app)/` — the product itself (Home, News, Agenda, Watchlist, Ask FinLens, Settings), wrapped in the shared app shell (sidebar/header/nav).
+- `src/app/studio/` — the embedded Sanity Studio.
+- `src/lib/data/` — data access layer (Sanity-backed with mock-data fallback for News/Agenda; static mock data for assets/watchlist).
+- `src/sanity/` — Sanity client, env config, and content schemas.
+- `src/components/ui/` — design system primitives. `src/components/features/` — page-specific components. `src/components/layout/` — app shell/navigation.
+- `scripts/seed-sanity.ts` — one-time content import (see above).

@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Star } from "lucide-react";
-import type { MarketEvent, NewsArticle, WatchlistItem } from "@/lib/types";
-import { getAsset } from "@/lib/data/assets";
+import type { Asset, MarketEvent, NewsArticle, WatchlistItem } from "@/lib/types";
+import { ASSETS } from "@/lib/data/assets";
 import { latestArticleForAsset, nextEventForAsset, eventsAffectingWatchlist } from "@/lib/portfolio";
 import { isWithinNextDays } from "@/lib/format";
 import { WatchlistRow } from "@/components/features/watchlist/WatchlistRow";
@@ -17,13 +17,19 @@ export function WatchlistView({
   focusTicker,
   articles,
   events,
+  assets,
 }: {
   initialItems: WatchlistItem[];
   focusTicker?: string;
   articles: NewsArticle[];
   events: MarketEvent[];
+  /** Live-priced assets for initialItems, fetched server-side. Tickers
+   * added client-side afterward (not yet persisted anywhere) fall back to
+   * static metadata since there's no live price for them yet. */
+  assets: Asset[];
 }) {
   const [items, setItems] = useState<WatchlistItem[]>(initialItems);
+  const assetsByTicker = useMemo(() => new Map(assets.map((a) => [a.ticker, a])), [assets]);
 
   useEffect(() => {
     if (!focusTicker) return;
@@ -94,7 +100,7 @@ export function WatchlistView({
       ) : (
         <div className="space-y-3">
           {items.map((item) => {
-            const asset = getAsset(item.ticker);
+            const asset = assetsByTicker.get(item.ticker) ?? ASSETS.find((a) => a.ticker === item.ticker);
             if (!asset) return null;
             return (
               <WatchlistRow

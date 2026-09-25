@@ -8,8 +8,10 @@ import { formatPrice } from "@/lib/format";
 
 export async function WatchlistSnapshot() {
   const tickers = getWatchlistTickers();
-  const assets = getAssets(tickers);
-  const thisWeekEvents = await getThisWeekEvents();
+  const [assets, thisWeekEvents] = await Promise.all([
+    getAssets(tickers),
+    getThisWeekEvents(),
+  ]);
   const relevantEvents = thisWeekEvents.filter((e) =>
     e.affectedAssets.some((a) => tickers.includes(a))
   );

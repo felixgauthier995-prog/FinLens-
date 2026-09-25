@@ -1,66 +1,71 @@
-import type { Category, EventStatus, EventType, MarketEvent, PossibleScenario } from "@/lib/types";
+import type { Category, EventStatus, EventType, MarketEvent } from "@/lib/types";
 import { makeImpact } from "@/lib/impact";
 import { daysFromNow, hoursAgo } from "@/lib/data/dates";
 import { isPast, isWithinNextDays } from "@/lib/format";
-import { fetchListOrFallback, fetchOneOrFallback } from "@/lib/data/sanityFetch";
+import { supabaseServerClient } from "@/lib/supabase/server";
 
-interface SanityMarketEventDoc {
-  id: string;
-  slug: string;
+interface SupabaseEventRow {
+  id: number;
   title: string;
-  eventType: EventType;
-  category: Category;
-  scheduledAt: string;
-  description: string;
-  impactScoreValue: number;
-  affectedAssets?: string[];
-  expectations: string;
-  whyItMatters: string;
-  possibleScenarios?: PossibleScenario[];
-  previousRelatedEventSlug?: string;
-  relatedArticleSlug?: string;
+  description: string | null;
+  event_type: string;
+  category: string | null;
+  event_date: string;
+  tickers: string[] | null;
+  importance: number | null;
 }
 
-const MARKET_EVENT_PROJECTION = `{
-  "id": _id,
-  "slug": slug.current,
-  title,
-  eventType,
-  category,
-  scheduledAt,
-  description,
-  "affectedAssets": affectedAssets[],
-  expectations,
-  whyItMatters,
-  "possibleScenarios": possibleScenarios[]{label, direction, description},
-  impactScoreValue,
-  previousRelatedEventSlug,
-  relatedArticleSlug
-}`;
-
 /** Upcoming vs. completed is never stored — it's derived from the date so
- * editors never have to remember to flip a status field. */
+ * ingestion never has to remember to flip a status field. */
 function computeStatus(scheduledAt: string): EventStatus {
   return isPast(scheduledAt) ? "completed" : "upcoming";
 }
 
-function mapSanityEvent(doc: SanityMarketEventDoc): MarketEvent {
+function slugifyEvent(title: string, id: number): string {
+  const base = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return `${base}-${id}`;
+}
+
+/**
+ * Real ingestion (Phase 3) only fills in the raw calendar facts — title,
+ * date, tickers, a 1-10 importance. The deeper analysis fields
+ * (why it matters, possible scenarios) are an OpenAI phase that hasn't
+ * been built yet, so we bridge with an honest, non-AI default per event
+ * type rather than leaving the page's "Why it matters" section empty.
+ */
+const WHY_IT_MATTERS_BY_TYPE: Partial<Record<string, string>> = {
+  earnings:
+    "Quarterly earnings are one of the clearest signals of whether a company is meeting growth and profitability expectations, and can move the stock sharply regardless of the broader market's direction.",
+};
+const DEFAULT_WHY_IT_MATTERS =
+  "This is a scheduled event FinLens is tracking for its potential market impact.";
+
+function mapSupabaseEvent(row: SupabaseEventRow): MarketEvent {
+  const category = (row.category as Category | null) ?? "macro";
+  const eventType = (row.event_type as EventType | undefined) ?? "economic-data";
+  const description = row.description ?? `${row.title} is a scheduled market event.`;
+
   return {
-    id: doc.id,
-    slug: doc.slug,
-    title: doc.title,
-    eventType: doc.eventType,
-    category: doc.category,
-    scheduledAt: doc.scheduledAt,
-    description: doc.description,
-    impactScore: makeImpact(doc.impactScoreValue),
-    affectedAssets: doc.affectedAssets ?? [],
-    expectations: doc.expectations,
-    whyItMatters: doc.whyItMatters,
-    possibleScenarios: doc.possibleScenarios ?? [],
-    previousRelatedEventSlug: doc.previousRelatedEventSlug,
-    relatedArticleSlug: doc.relatedArticleSlug,
-    status: computeStatus(doc.scheduledAt),
+    id: String(row.id),
+    slug: slugifyEvent(row.title, row.id),
+    title: row.title,
+    eventType,
+    category,
+    scheduledAt: row.event_date,
+    description,
+    impactScore: makeImpact(row.importance ?? 5),
+    affectedAssets: row.tickers ?? [],
+    // Ingestion (Phase 3) is the only source right now, so "expectations"
+    // reuses the same data-driven sentence as the description until
+    // analysis (Phase 5) provides a distinct one.
+    expectations: description,
+    whyItMatters: WHY_IT_MATTERS_BY_TYPE[row.event_type] ?? DEFAULT_WHY_IT_MATTERS,
+    possibleScenarios: [],
+    status: computeStatus(row.event_date),
   };
 }
 
@@ -323,23 +328,27 @@ function fallbackEventsSorted(): MarketEvent[] {
 }
 
 export async function getEvent(slug: string): Promise<MarketEvent | undefined> {
-  return fetchOneOrFallback<SanityMarketEventDoc, MarketEvent>(
-    `*[_type == "marketEvent" && slug.current == $slug][0] ${MARKET_EVENT_PROJECTION}`,
-    { slug },
-    mapSanityEvent,
-    () => {
-      const event = MARKET_EVENTS.find((e) => e.slug === slug);
-      return event ? { ...event, status: computeStatus(event.scheduledAt) } : undefined;
-    }
-  );
+  const events = await getEventsSorted();
+  return events.find((e) => e.slug === slug);
 }
 
 export async function getEventsSorted(): Promise<MarketEvent[]> {
-  return fetchListOrFallback<SanityMarketEventDoc, MarketEvent>(
-    `*[_type == "marketEvent"] | order(scheduledAt asc) ${MARKET_EVENT_PROJECTION}`,
-    mapSanityEvent,
-    fallbackEventsSorted()
-  );
+  if (!supabaseServerClient) return fallbackEventsSorted();
+
+  try {
+    const { data, error } = await supabaseServerClient
+      .from("events")
+      .select("id, title, description, event_type, category, event_date, tickers, importance")
+      .order("event_date", { ascending: true });
+
+    if (error) throw error;
+    if (!data || data.length === 0) return fallbackEventsSorted();
+
+    return (data as SupabaseEventRow[]).map(mapSupabaseEvent);
+  } catch (err) {
+    console.error("[events] Supabase fetch failed, falling back to mock data:", err);
+    return fallbackEventsSorted();
+  }
 }
 
 export async function getUpcomingEvents(limit?: number): Promise<MarketEvent[]> {

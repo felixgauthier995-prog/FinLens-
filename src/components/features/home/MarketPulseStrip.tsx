@@ -11,8 +11,8 @@ const DISPLAY_NAME: Record<string, string> = {
   GOLD: "Gold",
 };
 
-export function MarketPulseStrip() {
-  const assets = getAssets(MARKET_PULSE_TICKERS);
+export async function MarketPulseStrip() {
+  const assets = await getAssets(MARKET_PULSE_TICKERS);
 
   return (
     <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3 lg:grid-cols-6">

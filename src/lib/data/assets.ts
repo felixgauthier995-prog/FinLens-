@@ -1,4 +1,5 @@
 import type { Asset } from "@/lib/types";
+import { supabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Mock market data. Prices and changes are illustrative fictional values,
@@ -200,14 +201,60 @@ export const ASSETS: Asset[] = [
   },
 ];
 
-export function getAsset(ticker: string): Asset | undefined {
+function getAssetMeta(ticker: string): Asset | undefined {
   return ASSETS.find((a) => a.ticker === ticker);
 }
 
-export function getAssets(tickers: string[]): Asset[] {
-  return tickers
-    .map((t) => getAsset(t))
-    .filter((a): a is Asset => Boolean(a));
+interface SupabasePriceRow {
+  ticker: string;
+  price: number | null;
+  change_percent: number | null;
+  change_absolute: number | null;
+}
+
+/** Live quotes, keyed by ticker — fetched once per call to getAssets and
+ * merged over the static metadata. Falls back to the static mock price for
+ * any ticker Supabase doesn't have a fresh quote for (never configured,
+ * request failed, or that specific ticker hasn't been synced yet — e.g.
+ * OIL/DXY, which FMP's free tier doesn't support). */
+async function fetchLivePrices(tickers: string[]): Promise<Map<string, SupabasePriceRow>> {
+  const map = new Map<string, SupabasePriceRow>();
+  if (!supabaseServerClient) return map;
+
+  try {
+    const { data, error } = await supabaseServerClient
+      .from("stocks")
+      .select("ticker, price, change_percent, change_absolute")
+      .in("ticker", tickers);
+    if (error) throw error;
+    for (const row of (data ?? []) as SupabasePriceRow[]) {
+      if (row.price != null) map.set(row.ticker, row);
+    }
+  } catch (err) {
+    console.error("[assets] live price fetch failed, using static fallback:", err);
+  }
+  return map;
+}
+
+export async function getAssets(tickers: string[]): Promise<Asset[]> {
+  const metas = tickers.map(getAssetMeta).filter((a): a is Asset => Boolean(a));
+  const live = await fetchLivePrices(metas.map((a) => a.ticker));
+
+  return metas.map((asset) => {
+    const quote = live.get(asset.ticker);
+    if (!quote || quote.price == null) return asset;
+    return {
+      ...asset,
+      price: quote.price,
+      changePercent: quote.change_percent ?? asset.changePercent,
+      changeAbsolute: quote.change_absolute ?? asset.changeAbsolute,
+    };
+  });
+}
+
+export async function getAsset(ticker: string): Promise<Asset | undefined> {
+  const [asset] = await getAssets([ticker]);
+  return asset;
 }
 
 /** The six instruments shown in the Home "Market Pulse" strip. */

@@ -38,7 +38,7 @@ export default async function NewsDetailPage({
   const article = await getArticle(slug);
   if (!article) notFound();
 
-  const assets = getAssets(article.affectedAssets);
+  const assets = await getAssets(article.affectedAssets);
   const relatedEvent = article.relatedEventSlug ? await getEvent(article.relatedEventSlug) : undefined;
 
   return (

@@ -1,10 +1,13 @@
 import { getAsset } from "@/lib/data/assets";
 import { PriceChange } from "@/components/ui/PriceChange";
 
-export function MarketBrief() {
-  const spx = getAsset("SPX")!;
-  const nasdaq = getAsset("IXIC")!;
-  const dollar = getAsset("DXY")!;
+export async function MarketBrief() {
+  const [spx, nasdaq, dollar] = await Promise.all([
+    getAsset("SPX"),
+    getAsset("IXIC"),
+    getAsset("DXY"),
+  ]);
+  if (!spx || !nasdaq || !dollar) return null;
 
   return (
     <div className="rounded-xl border border-border bg-surface/60 p-5">

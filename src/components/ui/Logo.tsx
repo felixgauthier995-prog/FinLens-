@@ -1,4 +1,3 @@
-import { Aperture } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 export function Logo({
@@ -10,11 +9,16 @@ export function Logo({
 }) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-ink-950">
-        <Aperture className="h-4 w-4 text-white" strokeWidth={2} />
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/finlens-icon.png"
+        alt="FinLens"
+        width={28}
+        height={28}
+        className="h-7 w-7 shrink-0 rounded-md"
+      />
       {!iconOnly && (
-        <span className="text-[15px] font-semibold tracking-tight text-ink-950">
+        <span className="font-serif text-[17px] font-semibold tracking-tight text-ink-950">
           FinLens
         </span>
       )}

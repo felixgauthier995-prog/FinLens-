@@ -38,7 +38,7 @@ export default async function AgendaDetailPage({
   const event = await getEvent(slug);
   if (!event) notFound();
 
-  const assets = getAssets(event.affectedAssets);
+  const assets = await getAssets(event.affectedAssets);
   const [relatedArticle, previousEvent] = await Promise.all([
     event.relatedArticleSlug ? getArticle(event.relatedArticleSlug) : Promise.resolve(undefined),
     event.previousRelatedEventSlug

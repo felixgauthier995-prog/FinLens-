@@ -18,7 +18,7 @@ export function TopBar({
         <Logo iconOnly />
       </Link>
 
-      <div className="flex-1 sm:max-w-64">
+      <div className="flex-1 sm:max-w-md">
         <CommandSearch articles={articles} events={events} />
       </div>
 

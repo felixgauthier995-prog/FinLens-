@@ -1,3 +1,4 @@
+if (typeof window !== "undefined") throw new Error("Server-only module");
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabaseUrl } from "@/lib/supabase/env";
 

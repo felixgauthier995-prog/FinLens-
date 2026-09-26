@@ -1,3 +1,5 @@
+import { editorialEvents } from "@/lib/data/editorial";
+import { demoMode } from "@/lib/data/mode";
 import type { Category, EventStatus, EventType, MarketEvent } from "@/lib/types";
 import { makeImpact } from "@/lib/impact";
 import { daysFromNow, hoursAgo } from "@/lib/data/dates";
@@ -13,6 +15,7 @@ interface SupabaseEventRow {
   event_date: string;
   tickers: string[] | null;
   importance: number | null;
+  source_name: string | null;
 }
 
 /** Upcoming vs. completed is never stored — it's derived from the date so
@@ -56,6 +59,7 @@ function mapSupabaseEvent(row: SupabaseEventRow): MarketEvent {
     eventType,
     category,
     scheduledAt: row.event_date,
+    timeConfirmed: row.source_name !== "Financial Modeling Prep",
     description,
     impactScore: makeImpact(row.importance ?? 5),
     affectedAssets: row.tickers ?? [],
@@ -332,22 +336,22 @@ export async function getEvent(slug: string): Promise<MarketEvent | undefined> {
   return events.find((e) => e.slug === slug);
 }
 
-export async function getEventsSorted(): Promise<MarketEvent[]> {
-  if (!supabaseServerClient) return fallbackEventsSorted();
+async function automaticRecords(): Promise<MarketEvent[]> {
+  if (!supabaseServerClient) return demoMode ? fallbackEventsSorted() : [];
 
   try {
     const { data, error } = await supabaseServerClient
       .from("events")
-      .select("id, title, description, event_type, category, event_date, tickers, importance")
+      .select("id, title, description, event_type, category, event_date, tickers, importance, source_name")
       .order("event_date", { ascending: true });
 
     if (error) throw error;
-    if (!data || data.length === 0) return fallbackEventsSorted();
+    if (!data || data.length === 0) return demoMode ? fallbackEventsSorted() : [];
 
     return (data as SupabaseEventRow[]).map(mapSupabaseEvent);
   } catch (err) {
     console.error("[events] Supabase fetch failed, falling back to mock data:", err);
-    return fallbackEventsSorted();
+    return demoMode ? fallbackEventsSorted() : [];
   }
 }
 
@@ -378,4 +382,11 @@ export async function getThisWeekEvents(): Promise<MarketEvent[]> {
 export async function getEventsForAsset(ticker: string): Promise<MarketEvent[]> {
   const events = await getEventsSorted();
   return events.filter((e) => e.affectedAssets.includes(ticker));
+}
+
+export async function getEventsSorted(): Promise<MarketEvent[]> {
+ const [automatic,manual]=await Promise.all([automaticRecords(),editorialEvents()]);
+ const combined = new Map<string,MarketEvent>();
+ for(const item of [...automatic,...manual]) combined.set(item.slug,item);
+ return [...combined.values()].sort((a,b)=>Date.parse(a.scheduledAt)-Date.parse(b.scheduledAt));
 }

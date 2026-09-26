@@ -7,10 +7,11 @@ export function PriceChange({
   size = "md",
   className,
 }: {
-  changePercent: number;
+  changePercent: number | null;
   size?: "sm" | "md";
   className?: string;
 }) {
+  if (changePercent == null) return <span className="text-xs text-ink-400">—</span>;
   const isUp = changePercent > 0;
   const isFlat = changePercent === 0;
   const Icon = isFlat ? Minus : isUp ? ArrowUpRight : ArrowDownRight;

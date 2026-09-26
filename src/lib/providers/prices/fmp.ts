@@ -43,20 +43,21 @@ export async function fetchQuotes(tickers: string[], apiKey: string): Promise<Ra
         const symbol = encodeURIComponent(toFmpSymbol(ticker));
         const res = await fetch(
           `https://financialmodelingprep.com/stable/quote?symbol=${symbol}&apikey=${apiKey}`,
-          { cache: "no-store" }
+          { cache: "no-store", signal: AbortSignal.timeout(12000) }
         );
         if (!res.ok) return null;
         const rows = (await res.json()) as FmpQuoteRow[] | { [key: string]: unknown };
         if (!Array.isArray(rows) || rows.length === 0) return null;
         const row = rows[0];
+        if (![row.price,row.changePercentage,row.change].every(Number.isFinite) || row.price < 0) return null;
         return {
           ticker,
           price: row.price,
           changePercent: row.changePercentage,
           changeAbsolute: row.change,
         };
-      } catch (err) {
-        console.error(`[prices] fetch failed for ${ticker}:`, err);
+      } catch {
+        console.error(`[prices] fetch failed for ${ticker}`);
         return null;
       }
     })

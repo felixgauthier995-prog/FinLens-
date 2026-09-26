@@ -1,7 +1,7 @@
 /**
  * One-time import of FinLens's built-in mock content into Sanity, so the
  * Studio isn't empty on first login. Safe to re-run (uses deterministic
- * document IDs + createOrReplace).
+ * document IDs + createIfNotExists).
  *
  * Usage: npm run seed
  * Requires SANITY_WRITE_TOKEN in .env.local — generate one at
@@ -41,9 +41,10 @@ const client = createClient({
 async function seedNewsArticles() {
   console.log(`Seeding ${NEWS_ARTICLES.length} news articles…`);
   for (const a of NEWS_ARTICLES) {
-    await client.createOrReplace({
+    await client.createIfNotExists({
       _id: `newsArticle-${a.slug}`,
       _type: "newsArticle",
+      isDemo: true,
       title: a.title,
       slug: { _type: "slug", current: a.slug },
       summary: a.summary,
@@ -73,9 +74,10 @@ async function seedNewsArticles() {
 async function seedMarketEvents() {
   console.log(`\nSeeding ${MARKET_EVENTS.length} market events…`);
   for (const e of MARKET_EVENTS) {
-    await client.createOrReplace({
+    await client.createIfNotExists({
       _id: `marketEvent-${e.slug}`,
       _type: "marketEvent",
+      isDemo: true,
       title: e.title,
       slug: { _type: "slug", current: e.slug },
       eventType: e.eventType,

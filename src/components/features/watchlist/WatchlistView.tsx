@@ -2,9 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Star } from "lucide-react";
-import type { Asset, MarketEvent, NewsArticle, WatchlistItem } from "@/lib/types";
-import { ASSETS } from "@/lib/data/assets";
-import { latestArticleForAsset, nextEventForAsset, eventsAffectingWatchlist } from "@/lib/portfolio";
+import type {
+  Asset,
+  MarketEvent,
+  NewsArticle,
+  WatchlistItem,
+} from "@/lib/types";
+import { supabaseBrowserClient as db } from "@/lib/supabase/client";
+import {
+  latestArticleForAsset,
+  nextEventForAsset,
+  eventsAffectingWatchlist,
+} from "@/lib/portfolio";
 import { isWithinNextDays } from "@/lib/format";
 import { WatchlistRow } from "@/components/features/watchlist/WatchlistRow";
 import { AddAssetControl } from "@/components/features/watchlist/AddAssetControl";
@@ -13,7 +22,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionHeading } from "@/components/ui/Card";
 
 export function WatchlistView({
-  initialItems,
   focusTicker,
   articles,
   events,
@@ -28,8 +36,11 @@ export function WatchlistView({
    * static metadata since there's no live price for them yet. */
   assets: Asset[];
 }) {
-  const [items, setItems] = useState<WatchlistItem[]>(initialItems);
-  const assetsByTicker = useMemo(() => new Map(assets.map((a) => [a.ticker, a])), [assets]);
+  const [items, setItems] = useState<WatchlistItem[]>([]);
+  const assetsByTicker = useMemo(
+    () => new Map(assets.map((a) => [a.ticker, a])),
+    [assets],
+  );
 
   useEffect(() => {
     if (!focusTicker) return;
@@ -40,26 +51,114 @@ export function WatchlistView({
   const tickers = items.map((i) => i.ticker);
   const thisWeekEvents = useMemo(
     () => events.filter((e) => isWithinNextDays(e.scheduledAt, 7)),
-    [events]
+    [events],
   );
   const relevantEvents = useMemo(
     () => eventsAffectingWatchlist(tickers, thisWeekEvents),
-    [tickers, thisWeekEvents]
+    [tickers, thisWeekEvents],
   );
 
-  function handleAdd(ticker: string) {
-    setItems((prev) => [
-      ...prev,
-      { ticker, attentionLevel: "normal", addedAt: new Date().toISOString() },
-    ]);
+  const [message, setMessage] = useState("Loading saved watchlist…");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      if (!db) {
+        if (alive) setMessage("Account service unavailable.");
+        return;
+      }
+      const {
+        data: { user },
+      } = await db.auth.getUser();
+      if (!alive) return;
+      if (!user) {
+        setItems([]);
+        setMessage("Sign in in Settings to save your watchlist.");
+        return;
+      }
+      const { data, error } = await db
+        .from("user_watchlists")
+        .select("ticker,created_at")
+        .eq("user_id", user.id);
+      if (alive) {
+        setMessage(
+          error ? "Unable to load your watchlist. Try reloading." : "",
+        );
+        setItems(
+          (data ?? []).map((r) => ({
+            ticker: r.ticker,
+            addedAt: r.created_at,
+            attentionLevel: "normal",
+          })),
+        );
+      }
+    }
+    void load();
+    const sub = db?.auth.onAuthStateChange(() => {
+      setTimeout(() => void load(), 0);
+    });
+    return () => {
+      alive = false;
+      sub?.data.subscription.unsubscribe();
+    };
+  }, []);
+  async function update(ticker: string, remove: boolean) {
+    if (!db || busy) return;
+    setBusy(true);
+    try {
+      const {
+        data: { user },
+      } = await db.auth.getUser();
+      if (!user) {
+        setMessage("Sign in in Settings first.");
+        return;
+      }
+      const { error } = remove
+        ? await db
+            .from("user_watchlists")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("ticker", ticker)
+        : await db
+            .from("user_watchlists")
+            .upsert(
+              { user_id: user.id, ticker },
+              { onConflict: "user_id,ticker" },
+            );
+      if (error) throw error;
+      setItems((prev) =>
+        remove
+          ? prev.filter((i) => i.ticker !== ticker)
+          : prev.some((i) => i.ticker === ticker)
+            ? prev
+            : [
+                ...prev,
+                {
+                  ticker,
+                  attentionLevel: "normal",
+                  addedAt: new Date().toISOString(),
+                },
+              ],
+      );
+      setMessage("Saved.");
+    } catch {
+      setMessage("Could not save. Please retry.");
+    } finally {
+      setBusy(false);
+    }
   }
-
+  function handleAdd(ticker: string) {
+    void update(ticker, false);
+  }
   function handleRemove(ticker: string) {
-    setItems((prev) => prev.filter((i) => i.ticker !== ticker));
+    void update(ticker, true);
   }
 
   return (
-    <div>
+    <div aria-busy={busy}>
+      <p role="status" className="mb-3 text-sm text-ink-600">
+        {message}
+      </p>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-[22px] font-semibold tracking-tight text-ink-950 sm:text-2xl">
@@ -80,8 +179,12 @@ export function WatchlistView({
             className="mb-3"
           />
           <p className="mb-4 text-[13.5px] text-ink-600">
-            <span className="font-semibold text-ink-950">{relevantEvents.length}</span> event
-            {relevantEvents.length > 1 ? "s" : ""} may affect your watchlist this week.
+            <span className="font-semibold text-ink-950">
+              {relevantEvents.length}
+            </span>{" "}
+            event
+            {relevantEvents.length > 1 ? "s" : ""} may affect your watchlist
+            this week.
           </p>
           <div className="space-y-3">
             {relevantEvents.slice(0, 3).map((event) => (
@@ -100,7 +203,7 @@ export function WatchlistView({
       ) : (
         <div className="space-y-3">
           {items.map((item) => {
-            const asset = assetsByTicker.get(item.ticker) ?? ASSETS.find((a) => a.ticker === item.ticker);
+            const asset = assetsByTicker.get(item.ticker);
             if (!asset) return null;
             return (
               <WatchlistRow

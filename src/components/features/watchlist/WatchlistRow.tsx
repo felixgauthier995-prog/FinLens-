@@ -43,7 +43,7 @@ export function WatchlistRow({
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-end">
             <p className="font-data text-[15px] font-medium text-ink-950">
-              {formatPrice(asset.price)}
+              {formatPrice(asset.price)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? "Demo quote" : asset.priceUpdatedAt ? `Last stored quote · ${asset.priceUpdatedAt}` : "No verified quote"}</span>
             </p>
             <PriceChange changePercent={asset.changePercent} size="sm" />
           </div>

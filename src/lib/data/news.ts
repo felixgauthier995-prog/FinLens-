@@ -1,67 +1,54 @@
+import { editorialArticles } from "@/lib/data/editorial";
+import { demoMode } from "@/lib/data/mode";
 import type { Category, ImpactDirection, NewsArticle } from "@/lib/types";
 import { makeImpact } from "@/lib/impact";
 import { hoursAgo, minutesAgo } from "@/lib/data/dates";
-import { fetchListOrFallback, fetchOneOrFallback } from "@/lib/data/sanityFetch";
+import { supabaseServerClient } from "@/lib/supabase/server";
 
-interface SanityNewsArticleDoc {
-  id: string;
-  slug: string;
+interface SupabaseArticleRow {
+  id: number;
   title: string;
-  summary: string;
-  category: Category;
-  publishedAt: string;
-  source: string;
-  sourceUrl: string;
-  additionalSources?: { name: string; url: string }[];
-  impactScoreValue: number;
-  impactDirection: ImpactDirection;
-  affectedAssets?: string[];
-  whatHappened: string;
-  whyItMatters: string;
-  marketImpact: string;
-  whatToWatch?: string[];
-  relatedEventSlug?: string;
+  summary: string | null;
+  url: string | null;
+  source_name: string | null;
+  published_at: string;
+  tickers: string[] | null;
+  category: string | null;
+  impact_score: number | null;
+  impact_direction: string | null;
+  what_happened: string | null;
+  why_it_matters: string | null;
+  market_impact: string | null;
+  what_to_watch: string[] | null;
 }
 
-const NEWS_ARTICLE_PROJECTION = `{
-  "id": _id,
-  "slug": slug.current,
-  title,
-  summary,
-  category,
-  publishedAt,
-  source,
-  sourceUrl,
-  additionalSources[]{name, url},
-  impactScoreValue,
-  impactDirection,
-  "affectedAssets": affectedAssets[],
-  whatHappened,
-  whyItMatters,
-  marketImpact,
-  "whatToWatch": whatToWatch[],
-  relatedEventSlug
-}`;
+function slugifyArticle(title: string, id: number): string {
+  const base = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return `${base}-${id}`;
+}
 
-function mapSanityArticle(doc: SanityNewsArticleDoc): NewsArticle {
+function mapSupabaseArticle(row: SupabaseArticleRow): NewsArticle {
   return {
-    id: doc.id,
-    slug: doc.slug,
-    title: doc.title,
-    summary: doc.summary,
-    category: doc.category,
-    publishedAt: doc.publishedAt,
-    source: doc.source,
-    sourceUrl: doc.sourceUrl,
-    additionalSources: doc.additionalSources,
-    impactScore: makeImpact(doc.impactScoreValue),
-    impactDirection: doc.impactDirection,
-    affectedAssets: doc.affectedAssets ?? [],
-    whatHappened: doc.whatHappened,
-    whyItMatters: doc.whyItMatters,
-    marketImpact: doc.marketImpact,
-    whatToWatch: doc.whatToWatch ?? [],
-    relatedEventSlug: doc.relatedEventSlug,
+    id: String(row.id),
+    slug: slugifyArticle(row.title, row.id),
+    title: row.title,
+    summary: row.summary ?? row.title,
+    category: (row.category as Category | null) ?? "macro",
+    publishedAt: row.published_at,
+    source: row.source_name ?? "Unknown source",
+    sourceUrl: row.url ?? "",
+    impactScore: makeImpact(row.impact_score ?? 5),
+    impactDirection: (row.impact_direction as ImpactDirection | null) ?? "neutral",
+    affectedAssets: row.tickers ?? [],
+    whatHappened: row.what_happened ?? row.summary ?? row.title,
+    whyItMatters:
+      row.why_it_matters ?? "FinLens is tracking this story for its potential market relevance.",
+    marketImpact: row.market_impact ?? "Analysis for this story is still in progress.",
+    whatToWatch: row.what_to_watch ?? [],
   };
 }
 
@@ -385,20 +372,30 @@ function fallbackArticlesSorted(): NewsArticle[] {
 }
 
 export async function getArticle(slug: string): Promise<NewsArticle | undefined> {
-  return fetchOneOrFallback<SanityNewsArticleDoc, NewsArticle>(
-    `*[_type == "newsArticle" && slug.current == $slug][0] ${NEWS_ARTICLE_PROJECTION}`,
-    { slug },
-    mapSanityArticle,
-    () => NEWS_ARTICLES.find((a) => a.slug === slug)
-  );
+  const articles = await getArticlesSorted();
+  return articles.find((a) => a.slug === slug);
 }
 
-export async function getArticlesSorted(): Promise<NewsArticle[]> {
-  return fetchListOrFallback<SanityNewsArticleDoc, NewsArticle>(
-    `*[_type == "newsArticle"] | order(publishedAt desc) ${NEWS_ARTICLE_PROJECTION}`,
-    mapSanityArticle,
-    fallbackArticlesSorted()
-  );
+async function automaticRecords(): Promise<NewsArticle[]> {
+  if (!supabaseServerClient) return demoMode ? fallbackArticlesSorted() : [];
+
+  try {
+    const { data, error } = await supabaseServerClient
+      .from("articles")
+      .select(
+        "id, title, summary, url, source_name, published_at, tickers, category, impact_score, impact_direction, what_happened, why_it_matters, market_impact, what_to_watch"
+      )
+      .order("published_at", { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+    if (!data || data.length === 0) return demoMode ? fallbackArticlesSorted() : [];
+
+    return (data as SupabaseArticleRow[]).map(mapSupabaseArticle);
+  } catch (err) {
+    console.error("[news] Supabase fetch failed, falling back to mock data:", err);
+    return demoMode ? fallbackArticlesSorted() : [];
+  }
 }
 
 export async function getTopStories(limit = 5): Promise<NewsArticle[]> {
@@ -409,4 +406,11 @@ export async function getTopStories(limit = 5): Promise<NewsArticle[]> {
 export async function getArticlesForAsset(ticker: string): Promise<NewsArticle[]> {
   const articles = await getArticlesSorted();
   return articles.filter((a) => a.affectedAssets.includes(ticker));
+}
+
+export async function getArticlesSorted(): Promise<NewsArticle[]> {
+ const [automatic,manual]=await Promise.all([automaticRecords(),editorialArticles()]);
+ const combined = new Map<string,NewsArticle>();
+ for(const item of [...automatic,...manual]) combined.set(item.sourceUrl || item.slug,item);
+ return [...combined.values()].sort((a,b)=>Date.parse(b.publishedAt)-Date.parse(a.publishedAt));
 }

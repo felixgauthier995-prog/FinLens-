@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "seed": "tsx --env-file=.env.local scripts/seed-sanity.ts"
+    "seed": "tsx --env-file=.env.local scripts/seed-sanity.ts",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@sanity/image-url": "^2.1.1",

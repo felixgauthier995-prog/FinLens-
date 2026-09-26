@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-news",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/sync-asset-prices",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/sync-financial-events",
+      "schedule": "0 11 * * *"
+    }
+  ]
+}

@@ -8,14 +8,27 @@
 
 export type AssetType = "equity" | "etf" | "index" | "crypto" | "commodity" | "currency";
 
+export const COMPANY_EVENT_TYPES = [
+  "product-launch",
+  "contract",
+  "partnership",
+  "acquisition",
+  "earnings-guidance",
+  "regulatory",
+  "other",
+] as const;
+export type CompanyEventType = (typeof COMPANY_EVENT_TYPES)[number];
+
 export interface Asset {
   ticker: string;
   name: string;
   assetType: AssetType;
   sector?: string;
-  price: number;
-  changePercent: number;
-  changeAbsolute: number;
+  price: number | null;
+  priceUpdatedAt?: string;
+  dataStatus?: "demo" | "stored" | "unavailable";
+  changePercent: number | null;
+  changeAbsolute: number | null;
   currency: string;
 }
 
@@ -59,6 +72,23 @@ export interface NewsArticle {
   marketImpact: string;
   whatToWatch: string[];
   relatedEventSlug?: string;
+  /** Set when AI analysis flagged this as a major company-specific event
+   * (product launch, contract, partnership, M&A, earnings, regulatory). */
+  companyEventType?: CompanyEventType;
+  /** Stock price movement since this article was published, compared to a
+   * reference index — a timing correlation, never a claimed cause. Absent
+   * when no snapshot was captured (never fabricated). */
+  priceReaction?: PriceReaction[];
+}
+
+export interface PriceReaction {
+  ticker: string;
+  indexTicker: string;
+  /** Null when the current quote for this ticker isn't available. */
+  changeSincePercent: number | null;
+  indexChangeSincePercent: number | null;
+  capturedAt: string;
+  currentDataStatus: Asset["dataStatus"];
 }
 
 export type EventType =
@@ -88,6 +118,7 @@ export interface MarketEvent {
   eventType: EventType;
   category: Category;
   scheduledAt: string; // ISO 8601
+  timeConfirmed?: boolean;
   description: string;
   impactScore: ImpactScore;
   affectedAssets: string[];

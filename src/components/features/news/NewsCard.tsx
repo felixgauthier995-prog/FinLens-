@@ -9,10 +9,10 @@ export function NewsCard({ article }: { article: NewsArticle }) {
   return (
     <Link href={`/news/${article.slug}`} className="block">
       <CardLink className="p-4 sm:p-5">
-        <div className="flex items-center gap-2 text-[11px] text-ink-400">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-ink-400">
           <CategoryTag category={article.category} />
           <span aria-hidden="true">·</span>
-          <time dateTime={article.publishedAt}>{formatRelativeTime(article.publishedAt)}</time>
+          <span>{article.source}</span><span aria-hidden="true">·</span><time title={article.publishedAt} dateTime={article.publishedAt}>{formatRelativeTime(article.publishedAt)}</time>
         </div>
 
         <h3 className="mt-2.5 text-[15px] font-semibold leading-snug text-ink-950">

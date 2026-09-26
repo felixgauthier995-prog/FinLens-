@@ -42,7 +42,7 @@ export function createFmpEventProvider(apiKey: string): FinancialEventProvider {
       const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
       const url = `https://financialmodelingprep.com/stable/earnings-calendar?from=${fmt(from)}&to=${fmt(to)}&apikey=${apiKey}`;
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(12000) });
       if (!res.ok) {
         throw new Error(`FMP earnings-calendar request failed: ${res.status} ${res.statusText}`);
       }

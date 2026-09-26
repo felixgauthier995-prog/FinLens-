@@ -1,38 +1,39 @@
-import { getAsset } from "@/lib/data/assets";
-import { PriceChange } from "@/components/ui/PriceChange";
-
+import Link from "next/link";
+import { getArticlesSorted } from "@/lib/data/news";
 export async function MarketBrief() {
-  const [spx, nasdaq, dollar] = await Promise.all([
-    getAsset("SPX"),
-    getAsset("IXIC"),
-    getAsset("DXY"),
-  ]);
-  if (!spx || !nasdaq || !dollar) return null;
-
+  const articles = (await getArticlesSorted())
+    .filter(
+      (a) => new Date().getTime() - Date.parse(a.publishedAt) < 48 * 3600000,
+    )
+    .slice(0, 3);
   return (
-    <div className="rounded-xl border border-border bg-surface/60 p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-          Market Brief
+    <section className="rounded-xl border border-border bg-surface/60 p-5">
+      <h2 className="text-sm font-semibold">Market Brief</h2>
+      <p className="mt-1 text-xs text-ink-400">
+        Compiled {new Date().toISOString()} · coverage from the last 48 hours
+      </p>
+      {articles.length ? (
+        <ul className="mt-3 space-y-3">
+          {articles.map((a) => (
+            <li key={a.id}>
+              <Link
+                href={`/news/${a.slug}`}
+                className="font-medium hover:underline"
+              >
+                {a.title}
+              </Link>
+              <p className="mt-1 text-sm text-ink-600">{a.summary}</p>
+              <p className="text-xs text-ink-400">
+                {a.source} · {a.publishedAt}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm">
+          No recent verified coverage is available. Please check back later.
         </p>
-        <span className="text-[11px] text-ink-400">Updated a few minutes ago</span>
-      </div>
-      <p className="mt-2.5 text-[14.5px] leading-relaxed text-ink-800">
-        The S&P 500 is{" "}
-        <span className="font-data font-medium text-ink-950">
-          {spx.changePercent >= 0 ? "up" : "down"} {Math.abs(spx.changePercent).toFixed(2)}%
-        </span>{" "}
-        today after the Federal Reserve held interest rates steady and struck a more cautious tone
-        on future cuts than markets had priced in. Technology shares are outperforming, with the
-        Nasdaq <PriceChange changePercent={nasdaq.changePercent} size="sm" className="mx-0.5" />{" "}
-        on the back of a strong earnings report from NVIDIA. The dollar is firmer as rate-cut
-        expectations get pushed out, a mixed signal for gold and other dollar-denominated
-        commodities. All eyes now turn to tomorrow&rsquo;s U.S. retail sales report and Friday&rsquo;s
-        employment data for the next read on the economy.
-      </p>
-      <p className="mt-2 text-[11px] text-ink-400">
-        Dollar Index: <span className="font-data text-ink-600">{dollar.price.toFixed(2)}</span>
-      </p>
-    </div>
+      )}
+    </section>
   );
 }

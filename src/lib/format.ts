@@ -1,4 +1,5 @@
-export function formatPrice(value: number, currency = "USD"): string {
+export function formatPrice(value: number | null, currency = "USD"): string {
+  if (value == null || !Number.isFinite(value)) return "Unavailable";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
@@ -7,7 +8,8 @@ export function formatPrice(value: number, currency = "USD"): string {
   }).format(value);
 }
 
-export function formatPercent(value: number): string {
+export function formatPercent(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "—";
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
 }

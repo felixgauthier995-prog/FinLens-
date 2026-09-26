@@ -23,7 +23,7 @@ export function TopBar({
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
-        <NotificationsButton articles={articles} events={events} />
+        <NotificationsButton />
         <UserMenu />
       </div>
     </header>

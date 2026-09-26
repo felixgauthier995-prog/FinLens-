@@ -22,7 +22,7 @@ export async function MarketPulseStrip() {
             {DISPLAY_NAME[asset.ticker] ?? asset.name}
           </p>
           <p className="font-data mt-1 text-[15px] font-semibold text-ink-950">
-            {formatPrice(asset.price)}
+            {formatPrice(asset.price)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? "Demo quote" : asset.priceUpdatedAt ? `Last stored quote · ${asset.priceUpdatedAt}` : "No verified quote"}</span>
           </p>
           <PriceChange changePercent={asset.changePercent} size="sm" className="mt-0.5" />
         </div>

@@ -1,3 +1,4 @@
+import { demoMode } from "@/lib/data/mode";
 import type { Asset } from "@/lib/types";
 import { supabaseServerClient } from "@/lib/supabase/server";
 
@@ -210,6 +211,7 @@ interface SupabasePriceRow {
   price: number | null;
   change_percent: number | null;
   change_absolute: number | null;
+  price_updated_at: string | null;
 }
 
 /** Live quotes, keyed by ticker — fetched once per call to getAssets and
@@ -224,11 +226,11 @@ async function fetchLivePrices(tickers: string[]): Promise<Map<string, SupabaseP
   try {
     const { data, error } = await supabaseServerClient
       .from("stocks")
-      .select("ticker, price, change_percent, change_absolute")
+      .select("ticker, price, change_percent, change_absolute, price_updated_at")
       .in("ticker", tickers);
     if (error) throw error;
     for (const row of (data ?? []) as SupabasePriceRow[]) {
-      if (row.price != null) map.set(row.ticker, row);
+      if (row.price != null && Number.isFinite(row.price) && row.price >= 0) map.set(row.ticker, row);
     }
   } catch (err) {
     console.error("[assets] live price fetch failed, using static fallback:", err);
@@ -242,12 +244,14 @@ export async function getAssets(tickers: string[]): Promise<Asset[]> {
 
   return metas.map((asset) => {
     const quote = live.get(asset.ticker);
-    if (!quote || quote.price == null) return asset;
+    if (!quote || quote.price == null) return demoMode ? { ...asset, dataStatus: "demo" } : { ...asset, price: null, changePercent: null, changeAbsolute: null, dataStatus: "unavailable" };
     return {
       ...asset,
       price: quote.price,
-      changePercent: quote.change_percent ?? asset.changePercent,
-      changeAbsolute: quote.change_absolute ?? asset.changeAbsolute,
+      changePercent: quote.change_percent,
+      changeAbsolute: quote.change_absolute,
+      priceUpdatedAt: quote.price_updated_at ?? undefined,
+      dataStatus: "stored",
     };
   });
 }

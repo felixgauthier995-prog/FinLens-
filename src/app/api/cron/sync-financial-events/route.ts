@@ -3,20 +3,14 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { createFmpEventProvider } from "@/lib/providers/events/fmp";
 import type { RawFinancialEvent } from "@/lib/providers/events/types";
 
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const DAYS_AHEAD = 30;
 
 function extractErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (err && typeof err === "object" && "message" in err) {
-    return String((err as { message: unknown }).message);
-  }
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return String(err);
-  }
+  const message = err instanceof Error ? err.message : "Data operation failed";
+  return message.replace(/(?:sk-[A-Za-z0-9_-]+|(?:token|apikey|key)=\S+)/gi,"[redacted]").slice(0,300);
 }
 
 function isAuthorized(request: Request): boolean {
@@ -61,7 +55,7 @@ export async function GET(request: Request) {
 
   try {
     const provider = createFmpEventProvider(fmpKey);
-    received = await provider.fetchUpcomingEvents(DAYS_AHEAD);
+    received = (await provider.fetchUpcomingEvents(DAYS_AHEAD)).slice(0,300);
 
     const tickers = new Set(received.flatMap((e) => e.tickers));
     await upsertStocksForTickers(tickers);

@@ -80,14 +80,14 @@ export default async function AgendaDetailPage({
         className="mt-2 font-data text-[14px] font-medium text-ink-600"
         title={formatFullDate(event.scheduledAt)}
       >
-        {formatEventDay(event.scheduledAt)} · {formatEventTime(event.scheduledAt)}
+        {formatEventDay(event.scheduledAt)} · {event.timeConfirmed === false ? "Time unconfirmed" : formatEventTime(event.scheduledAt)}
       </p>
 
       <p className="mt-3 text-[15px] leading-relaxed text-ink-600">{event.description}</p>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <ImpactScore score={event.impactScore} />
-        {!completed && <AddAlertButton />}
+        {!completed && event.timeConfirmed !== false && <AddAlertButton eventSlug={event.slug} eventTitle={event.title} scheduledAt={event.scheduledAt} />}
       </div>
 
       {completed && relatedArticle && (
@@ -168,7 +168,7 @@ export default async function AgendaDetailPage({
                 </div>
                 <div className="flex flex-col items-end">
                   <p className="font-data text-[13.5px] font-medium text-ink-950">
-                    {formatPrice(asset.price)}
+                    {formatPrice(asset.price)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? "Demo quote" : asset.priceUpdatedAt ? `Last stored quote · ${asset.priceUpdatedAt}` : "No verified quote"}</span>
                   </p>
                   <PriceChange changePercent={asset.changePercent} size="sm" />
                 </div>
@@ -187,7 +187,7 @@ export default async function AgendaDetailPage({
               Get notified before this event so you have time to review your positions.
             </p>
             <div className="mt-3">
-              <AddAlertButton />
+              <AddAlertButton eventSlug={event.slug} eventTitle={event.title} scheduledAt={event.scheduledAt} />
             </div>
           </section>
         )}

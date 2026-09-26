@@ -1,172 +1,81 @@
 "use client";
-
-import { useMemo, useState } from "react";
-import { ArrowUp, Sparkles } from "lucide-react";
-import { ASK_ENTRIES, matchAskEntry, type AskSource } from "@/lib/data/ask";
-import { answerForWatchlistToday } from "@/lib/portfolio";
-import { getWatchlistTickers } from "@/lib/data/watchlist";
-import { isWithinNextDays } from "@/lib/format";
-import type { MarketEvent, NewsArticle } from "@/lib/types";
-import { AnswerCard } from "@/components/features/ask/AnswerCard";
-import { Input } from "@/components/ui/Input";
-
-interface AssistantAnswer {
+import { useState } from "react";
+import { supabaseBrowserClient as db } from "@/lib/supabase/client";
+import { AnswerCard } from "./AnswerCard";
+type Answer = {
   short: string;
   detail: string;
-  sources: AskSource[];
-  isAdviceBoundary?: boolean;
-}
-
-type Message =
-  | { id: string; role: "user"; text: string }
-  | ({ id: string; role: "assistant" } & AssistantAnswer);
-
-const WATCHLIST_KEYWORDS = ["watchlist", "my portfolio", "my stocks"];
-
-const FALLBACK: AssistantAnswer = {
-  short:
-    "I don't have a grounded answer for that yet in this preview. Try one of the questions below, or ask about a company, event, or economic report FinLens is tracking.",
-  detail:
-    "This prototype answers a curated set of questions using FinLens's own News and Agenda data. A production version would route unmatched questions to a live model with real-time retrieval.",
-  sources: [],
+  sources: { label: string; href: string }[];
 };
-
-function answerFor(
-  query: string,
-  articles: NewsArticle[],
-  thisWeekEvents: MarketEvent[]
-): AssistantAnswer {
-  const q = query.toLowerCase();
-  if (WATCHLIST_KEYWORDS.some((k) => q.includes(k))) {
-    return answerForWatchlistToday(getWatchlistTickers(), thisWeekEvents, articles);
+export function AskView() {
+  const [question, setQuestion] = useState("");
+  const [answers, setAnswers] = useState<
+    { question: string; answer: Answer }[]
+  >([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy || !question.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      const session = await db?.auth.getSession();
+      const token = session?.data.session?.access_token;
+      if (!token) throw new Error("Sign in in Settings to ask a question.");
+      const response = await fetch("/api/ask", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ question }),
+        signal: AbortSignal.timeout(45000),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to answer.");
+      setAnswers((prev) => [...prev, { question, answer: result }]);
+      setQuestion("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to answer.");
+    } finally {
+      setBusy(false);
+    }
   }
-  const entry = matchAskEntry(query);
-  if (entry) {
-    return {
-      short: entry.short,
-      detail: entry.detail,
-      sources: entry.sources,
-      isAdviceBoundary: entry.isAdviceBoundary,
-    };
-  }
-  return FALLBACK;
-}
-
-export function AskView({
-  articles,
-  events,
-}: {
-  articles: NewsArticle[];
-  events: MarketEvent[];
-}) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const thisWeekEvents = useMemo(
-    () => events.filter((e) => isWithinNextDays(e.scheduledAt, 7)),
-    [events]
-  );
-
-  function submit(text: string) {
-    const question = text.trim();
-    if (!question) return;
-
-    const answer = answerFor(question, articles, thisWeekEvents);
-    setMessages((prev) => [
-      ...prev,
-      { id: `u-${prev.length}`, role: "user", text: question },
-      { id: `a-${prev.length}`, role: "assistant", ...answer },
-    ]);
-    setInput("");
-  }
-
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col">
-      <div className="flex-1 px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mx-auto max-w-2xl">
-          {messages.length === 0 ? (
-            <div className="pt-6 sm:pt-10">
-              <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-ink-950">
-                <Sparkles className="h-5 w-5 text-white" strokeWidth={2} />
-              </div>
-              <h1 className="mt-3 text-[22px] font-semibold tracking-tight text-ink-950">
-                Ask FinLens
-              </h1>
-              <p className="mt-1.5 max-w-md text-[14px] leading-relaxed text-ink-400">
-                Plain-English answers about what&rsquo;s moving markets, grounded in FinLens&rsquo;s
-                own News and Agenda coverage. FinLens shares information, not investment advice.
-              </p>
-
-              <p className="mt-6 mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-                Try asking
-              </p>
-              <div className="flex flex-col gap-2">
-                {ASK_ENTRIES.map((entry) => (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    onClick={() => submit(entry.prompt)}
-                    className="rounded-lg border border-border px-4 py-2.5 text-left text-[13.5px] font-medium text-ink-800 transition-colors hover:border-border-strong hover:bg-surface"
-                  >
-                    {entry.prompt}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => submit("What matters for my watchlist today?")}
-                  className="rounded-lg border border-border px-4 py-2.5 text-left text-[13.5px] font-medium text-ink-800 transition-colors hover:border-border-strong hover:bg-surface"
-                >
-                  What matters for my watchlist today?
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((m) =>
-                m.role === "user" ? (
-                  <div key={m.id} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-xl bg-ink-950 px-4 py-2.5 text-[14px] text-white">
-                      {m.text}
-                    </div>
-                  </div>
-                ) : (
-                  <AnswerCard
-                    key={m.id}
-                    short={m.short}
-                    detail={m.detail}
-                    sources={m.sources}
-                    isAdviceBoundary={m.isAdviceBoundary}
-                  />
-                )
-              )}
-            </div>
-          )}
-        </div>
+    <div className="mx-auto max-w-2xl p-6">
+      <h1 className="text-2xl font-semibold">Ask FinLens</h1>
+      <p className="mt-2 text-sm text-ink-600">
+        Answers grounded in recent coverage, with sources and uncertainty. Sign
+        in to use your daily allowance.
+      </p>
+      <div className="my-6 space-y-4">
+        {answers.map((a, i) => (
+          <div key={i}>
+            <p className="mb-3 text-right font-medium">{a.question}</p>
+            <AnswerCard {...a.answer} />
+          </div>
+        ))}
       </div>
-
-      <div className="sticky bottom-16 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-6 md:bottom-0">
-        <form
-          className="mx-auto flex max-w-2xl items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit(input);
-          }}
+      <form onSubmit={submit} className="flex gap-2">
+        <input
+          aria-label="Your question"
+          maxLength={1500}
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          className="min-w-0 flex-1 rounded border border-border p-3"
+          placeholder="What matters for my watchlist?"
+        />
+        <button
+          disabled={busy || !question.trim()}
+          className="rounded bg-ink-950 px-4 text-white disabled:opacity-50"
         >
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about a company, event, or report…"
-            className="h-11"
-          />
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={!input.trim()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-ink-950 text-white transition-colors hover:bg-ink-800 disabled:cursor-not-allowed disabled:bg-ink-300"
-          >
-            <ArrowUp className="h-4 w-4" strokeWidth={2.25} />
-          </button>
-        </form>
-      </div>
+          {busy ? "Reading…" : "Ask"}
+        </button>
+      </form>
+      <p role="status" className="mt-3 text-sm">
+        {error}
+      </p>
     </div>
   );
 }

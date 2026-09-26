@@ -97,6 +97,46 @@ export default async function NewsDetailPage({
           </p>
         </ArticleSection>
 
+        {article.priceReaction && article.priceReaction.length > 0 && (
+          <ArticleSection eyebrow="Market data" title="Stock reaction since announcement">
+            <div className="space-y-3">
+              {article.priceReaction.map((reaction) => (
+                <div
+                  key={reaction.ticker}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-border p-3"
+                >
+                  <div>
+                    <p className="font-data text-[13.5px] font-semibold text-ink-950">
+                      {reaction.ticker}
+                    </p>
+                    <p className="text-[11px] text-ink-400">
+                      Since {formatFullDate(reaction.capturedAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {reaction.currentDataStatus === "unavailable" ||
+                    reaction.changeSincePercent === null ? (
+                      <span className="text-[13px] text-ink-400">No verified quote</span>
+                    ) : (
+                      <PriceChange changePercent={reaction.changeSincePercent} />
+                    )}
+                    <span className="text-[11px] text-ink-400">vs {reaction.indexTicker}</span>
+                    {reaction.indexChangeSincePercent === null ? (
+                      <span className="text-[13px] text-ink-400">—</span>
+                    ) : (
+                      <PriceChange changePercent={reaction.indexChangeSincePercent} size="sm" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[12.5px] italic text-ink-400">
+              This reflects price movement since publication compared to the S&amp;P 500 over the
+              same period — a timing correlation, not a confirmed cause-and-effect reaction.
+            </p>
+          </ArticleSection>
+        )}
+
         <section className="border-t border-border py-6">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Data</p>
           <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">Assets affected</h2>
@@ -115,7 +155,7 @@ export default async function NewsDetailPage({
                 </div>
                 <div className="flex flex-col items-end">
                   <p className="font-data text-[13.5px] font-medium text-ink-950">
-                    {formatPrice(asset.price)}
+                    {formatPrice(asset.price)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? "Demo quote" : asset.priceUpdatedAt ? `Last stored quote · ${asset.priceUpdatedAt}` : "No verified quote"}</span>
                   </p>
                   <PriceChange changePercent={asset.changePercent} size="sm" />
                 </div>

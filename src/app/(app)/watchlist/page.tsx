@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { WATCHLIST, getWatchlistTickers } from "@/lib/data/watchlist";
+import { WATCHLIST } from "@/lib/data/watchlist";
 import { getArticlesSorted } from "@/lib/data/news";
 import { getEventsSorted } from "@/lib/data/events";
-import { getAssets } from "@/lib/data/assets";
+import { getAssets, ASSETS } from "@/lib/data/assets";
 import { WatchlistView } from "@/components/features/watchlist/WatchlistView";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export default async function WatchlistPage({
   const [articles, events, assets] = await Promise.all([
     getArticlesSorted(),
     getEventsSorted(),
-    getAssets(getWatchlistTickers()),
+    getAssets(ASSETS.map(a=>a.ticker)),
   ]);
 
   return (

@@ -16,7 +16,7 @@ export function EventRow({ event }: { event: MarketEvent }) {
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-ink-400">
             <span className="font-data font-semibold text-ink-950">
-              {formatEventDay(event.scheduledAt)} · {formatEventTime(event.scheduledAt)}
+              {formatEventDay(event.scheduledAt)} · {event.timeConfirmed === false ? "Time unconfirmed" : formatEventTime(event.scheduledAt)}
             </span>
             <CategoryTag category={event.category} />
             <span className="rounded-full border border-border px-2 py-0.5 font-medium text-ink-600">
@@ -44,7 +44,7 @@ export function EventRow({ event }: { event: MarketEvent }) {
               <AssetTag key={ticker} ticker={ticker} />
             ))}
           </div>
-          {!completed && <AddAlertButton compact />}
+          {!completed && event.timeConfirmed !== false && <AddAlertButton eventSlug={event.slug} eventTitle={event.title} scheduledAt={event.scheduledAt} compact />}
         </div>
       </CardLink>
     </Link>

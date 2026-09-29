@@ -49,7 +49,7 @@ select cron.schedule('finlens-sync-news', '*/15 * * * *',
   $$select public.call_finlens_job('/api/cron/sync-news')$$);
 select cron.schedule('finlens-sync-company-events', '7,37 * * * *',
   $$select public.call_finlens_job('/api/cron/sync-company-events')$$);
--- US market hours on weekdays; FMP's free tier allows ~250 calls/day.
-select cron.schedule('finlens-sync-asset-prices', '5 14-21 * * 1-5',
+-- Every 2 hours on US market days: 4 runs x 40 tickers stays under FMP's ~250 calls/day.
+select cron.schedule('finlens-sync-asset-prices', '5 14,16,18,20 * * 1-5',
   $$select public.call_finlens_job('/api/cron/sync-asset-prices')$$);
 -- Daily jobs (financial events, signal tracking) stay on Vercel Cron.

@@ -6,6 +6,7 @@ import { analyzeArticle } from "@/lib/ai/analyzeArticle";
 import { fetchQuotes } from "@/lib/providers/prices/fmp";
 import { ASSETS } from "@/lib/data/assets";
 import type { RawNewsArticle } from "@/lib/providers/news/types";
+import { storeSignals } from "@/lib/signals/store";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ export async function GET(request: Request) {
   let itemsFailed = 0;
   let itemsReceived = 0;
   let priceReactionsCaptured = 0;
+  let signalsStored = 0;
   const errors: string[] = [];
 
   try {
@@ -153,6 +155,13 @@ export async function GET(request: Request) {
         if (error) throw error;
         itemsUpdated += 1;
 
+        if (upserted) {
+          signalsStored += await storeSignals(upserted.id, article, analysis.signals, {
+            openaiKey,
+            fmpKey,
+          });
+        }
+
         // Only capture a price snapshot for genuinely major, ticker-linked
         // events — and only using real fetched quotes, never a fabricated
         // value. A quote failure for one ticker just skips that row.
@@ -230,8 +239,8 @@ export async function GET(request: Request) {
 
   await supabaseAdminClient.from("ingestion_runs").insert(summary);
   console.log(
-    `[sync-company-events] analyzed=${itemsUpdated} priceSnapshots=${priceReactionsCaptured} skipped=${itemsSkipped} failed=${itemsFailed}`
+    `[sync-company-events] analyzed=${itemsUpdated} priceSnapshots=${priceReactionsCaptured} signals=${signalsStored} skipped=${itemsSkipped} failed=${itemsFailed}`
   );
 
-  return NextResponse.json({ ...summary, price_reactions_captured: priceReactionsCaptured });
+  return NextResponse.json({ ...summary, price_reactions_captured: priceReactionsCaptured, signals_stored: signalsStored });
 }

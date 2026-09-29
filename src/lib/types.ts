@@ -79,6 +79,38 @@ export interface NewsArticle {
    * reference index — a timing correlation, never a claimed cause. Absent
    * when no snapshot was captured (never fabricated). */
   priceReaction?: PriceReaction[];
+  /** Per-company catalyst signals. Absent for editorial/demo articles. */
+  signals?: ArticleSignal[];
+}
+
+export type SignalDirection = "positive" | "negative";
+export type SignalConfidence = "high" | "medium" | "low";
+export type SignalHorizon = "short" | "long";
+/** direct = company named in the article; chain = second-order effect. */
+export type SignalLinkLevel = "direct" | "chain";
+
+/** The AI's assessment that a story is good or bad news for one company.
+ * An assessment of the news, never a price prediction. */
+export interface ArticleSignal {
+  ticker: string;
+  direction: SignalDirection;
+  confidence: SignalConfidence;
+  horizon: SignalHorizon;
+  linkLevel: SignalLinkLevel;
+  rationale: string;
+  /** Sentence from the source article that supports the signal. */
+  evidenceQuote: string;
+  verified: boolean;
+  createdAt: string;
+}
+
+/** How past signals compared with the stock's move vs the index. */
+export interface SignalTrackRecord {
+  window: "1d" | "1w" | "1m";
+  /** Signals with a baseline and a follow-up price for this window. */
+  measured: number;
+  /** Signals whose direction matched the move relative to the index. */
+  matched: number;
 }
 
 export interface PriceReaction {

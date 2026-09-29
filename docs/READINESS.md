@@ -29,3 +29,12 @@ Local tests/typecheck/lint/build do not prove external credentials, database mig
 
 ## Verified external state
 Read-only check: required environment variable names are configured locally; articles endpoint responds 200. New user_watchlists, user_event_alerts and ai_usage_buckets endpoints respond 404: migration 0005 has not yet been applied. No live AI request has been made.
+
+## Catalyst signals (migration 0007)
+Per-company "good or bad news for this company" signals, extracted from each analyzed article.
+- Evidence rules (code, `src/lib/signals/filter.ts`): the AI must quote a sentence that really appears in the headline/summary, or the signal is dropped. A "direct" signal whose company isn't named is downgraded to "chain"; chain signals are always low confidence. Max 5 per article, known tickers only.
+- Second review (`src/lib/signals/verify.ts`): one extra OpenAI call per article that has signals; counts toward the 200/day global AI ceiling. If the budget is exhausted or the call fails, only direct signals are kept, marked unverified. Disable with `SIGNAL_VERIFICATION=off`. Optional `OPENAI_VERIFY_MODEL`.
+- Baseline: a real FMP quote for the ticker and SPY at storage time. `sync-news` uses `FMP_API_KEY` if present; without it signals are stored without a baseline and never count in the track record.
+- Track record: `/api/cron/track-signals` (weekdays 21:00 UTC) fills 1d / 1w / 1m prices. Late snapshots beyond a grace period are skipped rather than distorting results. Max 40 tickers per run (FMP free tier). A signal "matches" when the stock beat (positive) or lagged (negative) SPY over the window. The 1-week hit rate is shown once 20 signals are measured; all measured signals count, wrong ones included.
+- UI: arrows on news cards, full detail (reason, confidence, horizon, quote, direct/indirect, reviewed) on the article page, with a not-investment-advice notice.
+- Activation: apply `0007_article_signals.sql` in the Supabase SQL Editor. Until then the feed works as before (signal reads fail silently, writes are logged and skipped).

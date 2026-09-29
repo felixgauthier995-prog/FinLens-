@@ -10,6 +10,8 @@ import { ImpactScore } from "@/components/ui/ImpactScore";
 import { PriceChange } from "@/components/ui/PriceChange";
 import { ImpactDirectionBadge } from "@/components/features/news/ImpactDirection";
 import { ArticleSection } from "@/components/features/news/ArticleSection";
+import { SignalList } from "@/components/features/news/SignalList";
+import { getSignalTrackRecord } from "@/lib/data/signals";
 import { formatFullDate, formatRelativeTime, formatPrice } from "@/lib/format";
 
 // Rendered on demand (not pre-built) so articles published in the Sanity
@@ -40,6 +42,7 @@ export default async function NewsDetailPage({
 
   const assets = await getAssets(article.affectedAssets);
   const relatedEvent = article.relatedEventSlug ? await getEvent(article.relatedEventSlug) : undefined;
+  const trackRecord = article.signals?.length ? await getSignalTrackRecord() : undefined;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
@@ -89,6 +92,12 @@ export default async function NewsDetailPage({
         <ArticleSection eyebrow="Analysis" title="Why it matters">
           <p>{article.whyItMatters}</p>
         </ArticleSection>
+
+        {article.signals && article.signals.length > 0 && (
+          <ArticleSection eyebrow="Signals" title="Who could be affected">
+            <SignalList signals={article.signals} trackRecord={trackRecord} />
+          </ArticleSection>
+        )}
 
         <ArticleSection eyebrow="Analysis" title="Market impact">
           <p>{article.marketImpact}</p>

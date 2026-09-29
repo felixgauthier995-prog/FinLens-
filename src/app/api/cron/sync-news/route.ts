@@ -4,6 +4,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { createFinnhubNewsProvider } from "@/lib/providers/news/finnhub";
 import { analyzeArticle } from "@/lib/ai/analyzeArticle";
 import { ASSETS } from "@/lib/data/assets";
+import { storeSignals } from "@/lib/signals/store";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -67,6 +68,9 @@ export async function GET(request: Request) {
   let itemsFailed = 0;
   const errors: string[] = [];
   let itemsReceived = 0;
+  let signalsStored = 0;
+  // Optional here: without it, signals are stored without a baseline price.
+  const fmpKey = process.env.FMP_API_KEY;
 
   try {
     const provider = createFinnhubNewsProvider(finnhubKey);
@@ -104,7 +108,7 @@ export async function GET(request: Request) {
           continue;
         }
         const analysis = await analyzeArticle(article, knownTickers, openaiKey);
-        const { error } = await supabaseAdminClient.from("articles").upsert(
+        const { data: upserted, error } = await supabaseAdminClient.from("articles").upsert(
           {
             external_id: article.externalId,
             title: article.title,
@@ -124,9 +128,15 @@ export async function GET(request: Request) {
             raw_data: article.rawData,
           },
           { onConflict: "external_id" },
-        );
+        ).select("id").single();
         if (error) throw error;
         itemsUpdated += 1;
+        if (upserted) {
+          signalsStored += await storeSignals(upserted.id, article, analysis.signals, {
+            openaiKey,
+            fmpKey,
+          });
+        }
       } catch (err) {
         itemsFailed += 1;
         const message = extractErrorMessage(err);
@@ -167,8 +177,8 @@ export async function GET(request: Request) {
 
   await supabaseAdminClient.from("ingestion_runs").insert(summary);
   console.log(
-    `[sync-news] analyzed=${itemsUpdated} skipped=${itemsSkipped} failed=${itemsFailed}`,
+    `[sync-news] analyzed=${itemsUpdated} signals=${signalsStored} skipped=${itemsSkipped} failed=${itemsFailed}`,
   );
 
-  return NextResponse.json(summary);
+  return NextResponse.json({ ...summary, signals_stored: signalsStored });
 }

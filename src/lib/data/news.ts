@@ -4,6 +4,7 @@ import type { Category, ImpactDirection, NewsArticle } from "@/lib/types";
 import { makeImpact } from "@/lib/impact";
 import { hoursAgo, minutesAgo } from "@/lib/data/dates";
 import { supabaseServerClient } from "@/lib/supabase/server";
+import { getSignalsForArticles } from "@/lib/data/signals";
 
 interface SupabaseArticleRow {
   id: number;
@@ -391,7 +392,13 @@ async function automaticRecords(): Promise<NewsArticle[]> {
     if (error) throw error;
     if (!data || data.length === 0) return demoMode ? fallbackArticlesSorted() : [];
 
-    return (data as SupabaseArticleRow[]).map(mapSupabaseArticle);
+    const rows = data as SupabaseArticleRow[];
+    const signals = await getSignalsForArticles(rows.map((r) => r.id));
+    return rows.map((row) => {
+      const article = mapSupabaseArticle(row);
+      const articleSignals = signals.get(row.id);
+      return articleSignals?.length ? { ...article, signals: articleSignals } : article;
+    });
   } catch (err) {
     console.error("[news] Supabase fetch failed, falling back to mock data:", err);
     return demoMode ? fallbackArticlesSorted() : [];

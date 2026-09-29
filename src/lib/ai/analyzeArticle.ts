@@ -1,6 +1,7 @@
 import { CATEGORY_ORDER } from "@/lib/data/categories";
 import { COMPANY_EVENT_TYPES, type CompanyEventType } from "@/lib/types";
 import type { RawNewsArticle } from "@/lib/providers/news/types";
+import type { ProposedSignal } from "@/lib/signals/filter";
 
 export interface ArticleAnalysis {
   category: string;
@@ -14,6 +15,9 @@ export interface ArticleAnalysis {
   /** Only meaningful when analyzed with isCompanyNews: true. */
   isMajorCompanyEvent?: boolean;
   companyEventType?: CompanyEventType | null;
+  /** Per-company catalyst signals, unfiltered. Run filterSignals() on them
+   * against the article text before storing or showing anything. */
+  signals: ProposedSignal[];
 }
 
 const BASE_SYSTEM_PROMPT = `You are FinLens's editorial analysis engine. FinLens filters financial news for retail investors: it explains what happened, why it matters, and what could be affected — it never predicts prices and never gives buy/sell advice.
@@ -24,7 +28,17 @@ Rules:
 - "affectedAssets" must ONLY contain tickers from the provided known-tickers list that are plausibly, directly relevant to this specific article. If nothing on the list is clearly relevant, return an empty array — do not guess.
 - "impactScoreValue" (1-10) reflects how significant this news is for markets generally, not for any one stock.
 - Keep "whatHappened" factual and concise. Keep "whyItMatters" and "marketImpact" as analysis, clearly hedged where the future is uncertain.
-- "whatToWatch" is 2-3 short bullet points of concrete things to watch next.`;
+- "whatToWatch" is 2-3 short bullet points of concrete things to watch next.
+
+Signals ("signals" array) — per-company catalysts:
+- A signal says whether this news is GOOD or BAD for one specific company's business, from the known-tickers list only. It is an assessment of the news, not a prediction of the share price.
+- "linkLevel": "direct" only when the article itself names the company. "chain" for a second-order effect you reason about (a supplier, customer or competitor not named in the article). Only propose a "chain" signal when the mechanism is concrete and widely understood (e.g. a large AI data-center order → the chip supplier); never for vague sector associations.
+- "evidenceQuote": copy, word for word, one sentence or clause from the headline or summary that supports the signal. For a chain signal, quote the fact that triggers the effect. Never paraphrase or invent. If you cannot quote support, do not emit the signal.
+- "direction": "positive" or "negative". If the effect is genuinely unclear or balanced, do not emit a signal for that company.
+- "confidence": "high" only when the article states a concrete, material fact about the company (a signed contract, reported results, a regulatory decision). "medium" when the effect is likely but depends on details. "low" otherwise. Chain signals are always "low".
+- "horizon": "short" for effects likely to be felt within days (results, guidance, a ruling), "long" for effects that build over months (a multi-year contract, a new market).
+- "rationale": one short plain-language sentence a non-expert understands, explaining why this is good or bad for the company. No certainty about future prices.
+- Emit at most 5 signals. Returning an empty array is correct and expected for most macro stories and opinion pieces.`;
 
 const COMPANY_EVENT_ADDENDUM = `
 This article was fetched from a specific company's news feed. Additionally:
@@ -42,6 +56,23 @@ const RESPONSE_SCHEMA_BASE = {
   marketImpact: { type: "string" },
   whatToWatch: { type: "array", items: { type: "string" } },
   affectedAssets: { type: "array", items: { type: "string" } },
+  signals: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        ticker: { type: "string" },
+        direction: { type: "string", enum: ["positive", "negative"] },
+        confidence: { type: "string", enum: ["high", "medium", "low"] },
+        horizon: { type: "string", enum: ["short", "long"] },
+        linkLevel: { type: "string", enum: ["direct", "chain"] },
+        rationale: { type: "string" },
+        evidenceQuote: { type: "string" },
+      },
+      required: ["ticker", "direction", "confidence", "horizon", "linkLevel", "rationale", "evidenceQuote"],
+      additionalProperties: false,
+    },
+  },
 };
 const BASE_REQUIRED = [
   "category",
@@ -52,6 +83,7 @@ const BASE_REQUIRED = [
   "marketImpact",
   "whatToWatch",
   "affectedAssets",
+  "signals",
 ];
 
 interface AnalyzeOptions {
@@ -88,7 +120,7 @@ export async function analyzeArticle(
     },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      max_completion_tokens: 1400,
+      max_completion_tokens: 2200,
       messages: [
         { role: "system", content: systemPrompt },
         {
@@ -160,6 +192,22 @@ export function validateAnalysis(
     a.affectedAssets.some((t) => !tickers.includes(t))
   )
     throw new Error("Unknown affected asset");
+  if (!Array.isArray(a.signals)) throw new Error("Invalid signals");
+  for (const sig of a.signals) {
+    if (
+      !sig ||
+      typeof sig.ticker !== "string" ||
+      !["positive", "negative"].includes(sig.direction) ||
+      !["high", "medium", "low"].includes(sig.confidence) ||
+      !["short", "long"].includes(sig.horizon) ||
+      !["direct", "chain"].includes(sig.linkLevel) ||
+      typeof sig.rationale !== "string" ||
+      sig.rationale.length > 600 ||
+      typeof sig.evidenceQuote !== "string" ||
+      sig.evidenceQuote.length > 800
+    )
+      throw new Error("Invalid signal");
+  }
   if (isCompanyNews) {
     if (typeof a.isMajorCompanyEvent !== "boolean") throw new Error("Invalid isMajorCompanyEvent");
     if (a.companyEventType != null && !(COMPANY_EVENT_TYPES as readonly string[]).includes(a.companyEventType))

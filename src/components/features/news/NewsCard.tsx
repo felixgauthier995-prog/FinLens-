@@ -4,6 +4,7 @@ import { CardLink } from "@/components/ui/Card";
 import { CategoryTag, AssetTag } from "@/components/ui/Tag";
 import { ImpactScore } from "@/components/ui/ImpactScore";
 import { formatRelativeTime } from "@/lib/format";
+import { SignalChips } from "@/components/features/news/SignalList";
 
 export function NewsCard({ article }: { article: NewsArticle }) {
   return (
@@ -21,11 +22,15 @@ export function NewsCard({ article }: { article: NewsArticle }) {
         <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-600">{article.summary}</p>
 
         <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {article.affectedAssets.slice(0, 4).map((ticker) => (
-              <AssetTag key={ticker} ticker={ticker} />
-            ))}
-          </div>
+          {article.signals?.length ? (
+            <SignalChips signals={article.signals} />
+          ) : (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {article.affectedAssets.slice(0, 4).map((ticker) => (
+                <AssetTag key={ticker} ticker={ticker} />
+              ))}
+            </div>
+          )}
           <ImpactScore score={article.impactScore} size="sm" />
         </div>
       </CardLink>

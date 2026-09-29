@@ -1,13 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import type { MarketEvent } from "@/lib/types";
 import { CardLink } from "@/components/ui/Card";
 import { CategoryTag, AssetTag } from "@/components/ui/Tag";
 import { ImpactScore } from "@/components/ui/ImpactScore";
 import { AddAlertButton } from "@/components/features/agenda/AddAlertButton";
-import { EVENT_TYPE_LABEL } from "@/lib/data/categories";
+import { useI18n } from "@/i18n/client";
 import { formatEventDay, formatEventTime } from "@/lib/format";
 
 export function EventRow({ event }: { event: MarketEvent }) {
+  const { locale, m } = useI18n();
   const completed = event.status === "completed";
 
   return (
@@ -16,15 +19,15 @@ export function EventRow({ event }: { event: MarketEvent }) {
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-ink-400">
             <span className="font-data font-semibold text-ink-950">
-              {formatEventDay(event.scheduledAt)} · {event.timeConfirmed === false ? "Time unconfirmed" : formatEventTime(event.scheduledAt)}
+              {formatEventDay(event.scheduledAt, locale)} · {event.timeConfirmed === false ? m.agenda.timeUnconfirmed : formatEventTime(event.scheduledAt, locale)}
             </span>
             <CategoryTag category={event.category} />
             <span className="rounded-full border border-border px-2 py-0.5 font-medium text-ink-600">
-              {EVENT_TYPE_LABEL[event.eventType]}
+              {m.eventTypes[event.eventType]}
             </span>
             {completed && (
               <span className="rounded-full bg-surface px-2 py-0.5 font-medium text-ink-400">
-                Completed
+                {m.agenda.completed}
               </span>
             )}
           </div>

@@ -13,6 +13,8 @@ export const SIGNAL_INDEX_TICKER = "SPY";
 
 interface StoreSignalsOptions {
   openaiKey: string;
+  /** French headline, for notifications to French-speaking users. */
+  titleFr?: string;
   /** Without it, signals are stored but have no baseline price and never
    * count toward the track record. */
   fmpKey?: string;
@@ -27,8 +29,9 @@ export async function storeSignals(
   articleId: number,
   article: RawNewsArticle,
   proposed: ProposedSignal[],
-  { openaiKey, fmpKey }: StoreSignalsOptions
+  options: StoreSignalsOptions
 ): Promise<number> {
+  const { openaiKey, fmpKey } = options;
   if (!supabaseAdminClient || proposed.length === 0) return 0;
 
   try {
@@ -75,6 +78,7 @@ export async function storeSignals(
         horizon: s.horizon,
         link_level: s.linkLevel,
         rationale: s.rationale.trim(),
+        rationale_fr: s.rationaleFr?.trim() || null,
         evidence_quote: s.evidenceQuote.trim(),
         verified,
         index_ticker: SIGNAL_INDEX_TICKER,
@@ -91,7 +95,7 @@ export async function storeSignals(
     // Tell followers of these stocks. A failure here never loses the signals.
     try {
       await notifySignalWatchers(
-        { title: article.title, slug: slugifyArticle(article.title, articleId) },
+        { title: article.title, titleFr: options.titleFr, slug: slugifyArticle(article.title, articleId) },
         kept
       );
     } catch (err) {

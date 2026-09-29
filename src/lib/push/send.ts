@@ -2,6 +2,8 @@ import "server-only";
 import webpush from "web-push";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { reserveQuota } from "@/lib/security/quota";
+import { messages } from "@/i18n/messages";
+import { isLocale } from "@/i18n/config";
 
 export interface PushPayload {
   title: string;
@@ -71,7 +73,7 @@ interface SignalForPush {
  * direct links (company named in the article) trigger a notification.
  */
 export async function notifySignalWatchers(
-  article: { title: string; slug: string },
+  article: { title: string; titleFr?: string; slug: string },
   signals: SignalForPush[]
 ): Promise<number> {
   if (!supabaseAdminClient || !configure()) return 0;
@@ -90,12 +92,12 @@ export async function notifySignalWatchers(
   }
   if (byUser.size === 0) return 0;
 
-  const { data: optedOut } = await supabaseAdminClient
+  const { data: profiles } = await supabaseAdminClient
     .from("profiles")
-    .select("user_id")
-    .in("user_id", [...byUser.keys()])
-    .eq("notify_signals", false);
-  const skip = new Set((optedOut ?? []).map((r) => r.user_id));
+    .select("user_id, notify_signals, locale")
+    .in("user_id", [...byUser.keys()]);
+  const skip = new Set((profiles ?? []).filter((r) => r.notify_signals === false).map((r) => r.user_id));
+  const localeOf = new Map((profiles ?? []).map((r) => [r.user_id, isLocale(r.locale) ? r.locale : "en"]));
 
   const day = new Date().toISOString().slice(0, 10);
   let sent = 0;
@@ -103,9 +105,10 @@ export async function notifySignalWatchers(
     if (skip.has(userId)) continue;
     if (!(await reserveQuota(`push-signal:${userId}:${day}`, SIGNAL_PUSHES_PER_DAY))) continue;
     const arrows = sigs.map((s) => `${s.ticker} ${s.direction === "positive" ? "↑" : "↓"}`).join(" · ");
+    const locale = localeOf.get(userId) ?? "en";
     sent += await sendToUser(userId, {
-      title: `New signal: ${arrows}`,
-      body: article.title.slice(0, 140),
+      title: messages[locale].push.newSignal(arrows),
+      body: (locale === "fr" && article.titleFr ? article.titleFr : article.title).slice(0, 140),
       url: `/news/${article.slug}`,
       tag: `signal-${article.slug}`,
     });

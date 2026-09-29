@@ -17,17 +17,10 @@ import {
   type Sector,
 } from "@/lib/onboarding/options";
 import { saveOnboarding } from "@/app/(public)/onboarding/actions";
+import { useI18n } from "@/i18n/client";
 
 const STEPS = ["experience", "goal", "sectors", "risk", "stocks"] as const;
-type Step = (typeof STEPS)[number];
 
-const TITLES: Record<Step, { title: string; subtitle: string }> = {
-  experience: { title: "How much investing experience do you have?", subtitle: "We'll adapt how much we explain." },
-  goal: { title: "What brings you to FinLens?", subtitle: "Pick the one that fits best." },
-  sectors: { title: "Which areas interest you?", subtitle: "Choose as many as you like." },
-  risk: { title: "How do you feel about risk?", subtitle: "There's no wrong answer." },
-  stocks: { title: "Pick the stocks you want to follow", subtitle: `Choose ${MIN_STOCKS} to ${MAX_STOCKS}. You can change them anytime.` },
-};
 
 function OptionCard({
   selected,
@@ -101,6 +94,8 @@ function StockChip({
 }
 
 export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
+  const { m } = useI18n();
+  const t = m.onboarding;
   const [stepIndex, setStepIndex] = useState(0);
   const [experience, setExperience] = useState<Experience | null>(null);
   const [goal, setGoal] = useState<Goal | null>(null);
@@ -156,12 +151,12 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
           type="button"
           onClick={() => setStepIndex(Math.max(0, stepIndex - 1))}
           disabled={stepIndex === 0}
-          aria-label="Previous question"
+          aria-label={t.previous}
           className="flex h-9 w-9 items-center justify-center rounded-full text-ink-600 hover:bg-surface disabled:invisible"
         >
           <ArrowLeft className="h-4 w-4" strokeWidth={2} />
         </button>
-        <div className="flex flex-1 gap-1.5" aria-label={`Step ${stepIndex + 1} of ${STEPS.length}`}>
+        <div className="flex flex-1 gap-1.5" aria-label={t.stepOf(stepIndex + 1, STEPS.length)}>
           {STEPS.map((s, i) => (
             <span
               key={s}
@@ -172,32 +167,32 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
       </div>
 
       <h1 className="mt-8 text-[24px] font-semibold leading-tight tracking-tight text-ink-950">
-        {TITLES[step].title}
+        {t.titles[step].title}
       </h1>
-      <p className="mt-2 text-[14.5px] text-ink-600">{TITLES[step].subtitle}</p>
+      <p className="mt-2 text-[14.5px] text-ink-600">{step === "stocks" ? t.titles.stocks.subtitle(MIN_STOCKS, MAX_STOCKS) : t.titles[step].subtitle}</p>
 
       <div className="mt-7 space-y-2.5" role={step === "sectors" || step === "stocks" ? "group" : "radiogroup"}>
         {step === "experience" &&
           EXPERIENCE_OPTIONS.map((o) => (
-            <OptionCard key={o.value} selected={experience === o.value} onClick={() => setExperience(o.value)} label={o.label} hint={o.hint} />
+            <OptionCard key={o.value} selected={experience === o.value} onClick={() => setExperience(o.value)} label={t.experience[o.value].label} hint={t.experience[o.value].hint} />
           ))}
 
         {step === "goal" &&
           GOAL_OPTIONS.map((o) => (
-            <OptionCard key={o.value} selected={goal === o.value} onClick={() => setGoal(o.value)} label={o.label} hint={o.hint} />
+            <OptionCard key={o.value} selected={goal === o.value} onClick={() => setGoal(o.value)} label={t.goal[o.value].label} hint={t.goal[o.value].hint} />
           ))}
 
         {step === "sectors" && (
           <div className="grid grid-cols-2 gap-2.5">
             {SECTOR_OPTIONS.map((o) => (
-              <OptionCard key={o.value} multi selected={sectors.includes(o.value)} onClick={() => setSectors(toggle(sectors, o.value))} label={o.label} />
+              <OptionCard key={o.value} multi selected={sectors.includes(o.value)} onClick={() => setSectors(toggle(sectors, o.value))} label={t.sectors[o.value]} />
             ))}
           </div>
         )}
 
         {step === "risk" &&
           RISK_OPTIONS.map((o) => (
-            <OptionCard key={o.value} selected={risk === o.value} onClick={() => setRisk(o.value)} label={o.label} hint={o.hint} />
+            <OptionCard key={o.value} selected={risk === o.value} onClick={() => setRisk(o.value)} label={t.risk[o.value].label} hint={t.risk[o.value].hint} />
           ))}
 
         {step === "stocks" && (
@@ -208,8 +203,8 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search a company or ticker (e.g. Disney, NFLX)"
-                aria-label="Search stocks"
+                placeholder={t.searchPlaceholder}
+                aria-label={t.searchLabel}
                 className="h-11 w-full rounded-xl border border-border-strong pl-10 pr-3 text-[14px] text-ink-950 outline-none placeholder:text-ink-300 focus:border-accent"
               />
             </label>
@@ -222,7 +217,7 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
                     type="button"
                     onClick={() => setTickers(toggle(tickers, a.ticker))}
                     className="font-data inline-flex items-center gap-1 rounded-full bg-ink-950 px-2.5 py-1 text-[12px] font-semibold text-white"
-                    aria-label={`Remove ${a.ticker}`}
+                    aria-label={t.remove(a.ticker)}
                   >
                     {a.ticker} <span aria-hidden="true">×</span>
                   </button>
@@ -233,7 +228,7 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
             {q ? (
               <div className="grid gap-2 pt-2">
                 {searchResults.length === 0 && (
-                  <p className="py-6 text-center text-[13px] text-ink-400">No company matches “{query}”.</p>
+                  <p className="py-6 text-center text-[13px] text-ink-400">{t.noMatch(query)}</p>
                 )}
                 {searchResults.map((a) => (
                   <StockChip key={a.ticker} asset={a} selected={tickers.includes(a.ticker)} disabled={atMax} onToggle={() => setTickers(toggle(tickers, a.ticker))} />
@@ -243,7 +238,7 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
               <>
                 {suggested.length > 0 && (
                   <>
-                    <p className="pt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-400">Suggested for you</p>
+                    <p className="pt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-400">{t.suggested}</p>
                     <div className="grid gap-2">
                       {suggested.slice(0, 12).map((a) => (
                         <StockChip key={a.ticker} asset={a} selected={tickers.includes(a.ticker)} disabled={atMax} onToggle={() => setTickers(toggle(tickers, a.ticker))} />
@@ -251,7 +246,7 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
                     </div>
                   </>
                 )}
-                <p className="pt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-400">Popular</p>
+                <p className="pt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-400">{t.popular}</p>
                 <div className="grid gap-2">
                   {others
                     .filter((a) => ["AAPL", "NVDA", "TSLA", "MSFT", "AMZN", "GOOGL", "META", "SPY"].includes(a.ticker))
@@ -260,7 +255,7 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
                     ))}
                 </div>
                 <p className="pt-2 text-center text-[12.5px] text-ink-400">
-                  {assets.length} companies available — use the search to find yours.
+                  {t.available(assets.length)}
                 </p>
               </>
             )}
@@ -282,9 +277,9 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
         >
           {step === "stocks"
             ? saving
-              ? "Saving…"
-              : `Continue with ${tickers.length} stock${tickers.length === 1 ? "" : "s"}`
-            : "Continue"}
+              ? m.common.saving
+              : t.continueWith(tickers.length)
+            : m.common.continue}
         </button>
       </div>
     </main>

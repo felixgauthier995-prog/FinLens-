@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, Plus } from "lucide-react";
 import type { NewsArticle } from "@/lib/types";
 import type { UserPreferences } from "@/lib/personalization";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/i18n/client";
 
 interface TickerLatest {
   ticker: string;
@@ -34,6 +37,7 @@ export function WatchlistSnapshot({
   prefs: UserPreferences;
   articles: NewsArticle[];
 }) {
+  const { m } = useI18n();
   if (prefs.tickers.length === 0) {
     return (
       <Link
@@ -41,7 +45,7 @@ export function WatchlistSnapshot({
         className="flex items-center gap-2 rounded-xl border border-dashed border-border-strong p-5 text-[13.5px] font-medium text-ink-600 hover:bg-surface"
       >
         <Plus className="h-4 w-4" strokeWidth={2} />
-        Add the stocks you follow
+        {m.home.addStocks}
       </Link>
     );
   }
@@ -57,13 +61,13 @@ export function WatchlistSnapshot({
               {row.ticker}
             </span>
             <span className="flex-1 truncate text-[12.5px] text-ink-600">
-              {row.headline ?? "No recent news"}
+              {row.headline ?? m.home.noRecentNews}
             </span>
             {row.direction && (
               <Icon
                 className={cn("h-4 w-4 shrink-0", row.direction === "positive" ? "text-positive" : "text-negative")}
                 strokeWidth={2.25}
-                aria-label={row.direction === "positive" ? "Potential positive impact" : "Potential negative impact"}
+                aria-label={row.direction === "positive" ? m.signals.positive : m.signals.negative}
               />
             )}
           </>

@@ -145,6 +145,7 @@ export async function GET(request: Request) {
               market_impact: analysis.marketImpact,
               what_to_watch: analysis.whatToWatch,
               plain_explanation: analysis.plainExplanation.trim() || null,
+              fr: analysis.fr,
               company_event_type: analysis.isMajorCompanyEvent ? analysis.companyEventType : null,
               raw_data: article.rawData,
             },
@@ -159,6 +160,7 @@ export async function GET(request: Request) {
           signalsStored += await storeSignals(upserted.id, article, analysis.signals, {
             openaiKey,
             fmpKey,
+            titleFr: analysis.fr.title,
           });
         }
 

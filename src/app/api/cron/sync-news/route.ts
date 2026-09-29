@@ -120,6 +120,7 @@ export async function GET(request: Request) {
             market_impact: analysis.marketImpact,
             what_to_watch: analysis.whatToWatch,
               plain_explanation: analysis.plainExplanation.trim() || null,
+              fr: analysis.fr,
             raw_data: article.rawData,
           },
           { onConflict: "external_id" },
@@ -130,6 +131,7 @@ export async function GET(request: Request) {
           signalsStored += await storeSignals(upserted.id, article, analysis.signals, {
             openaiKey,
             fmpKey,
+            titleFr: analysis.fr.title,
           });
         }
       } catch (err) {

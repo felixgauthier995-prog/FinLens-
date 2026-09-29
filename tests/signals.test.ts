@@ -87,10 +87,14 @@ test("malformed signals are rejected by validation", () => {
     whatToWatch: [],
     affectedAssets: ["NVDA"],
     plainExplanation: "Plain words.",
+    fr: { title: "t", whatHappened: "w", whyItMatters: "y", marketImpact: "m", whatToWatch: [], plainExplanation: "p" },
   };
   assert.doesNotThrow(() => validateAnalysis({ ...base, signals: [sig({})] }, ["NVDA"]));
   assert.throws(() => validateAnalysis({ ...base, signals: [sig({ direction: "up" as never })] }, ["NVDA"]));
   assert.throws(() => validateAnalysis(base, ["NVDA"]));
+  const { fr: _fr, ...noFrench } = { ...base, signals: [] };
+  void _fr;
+  assert.throws(() => validateAnalysis(noFrench, ["NVDA"]), /French/);
 });
 
 test("short tickers and common words never count as naming a company", () => {

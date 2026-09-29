@@ -11,9 +11,9 @@ import { PriceChange } from "@/components/ui/PriceChange";
 import { ArticleSection } from "@/components/features/news/ArticleSection";
 import { ImpactDirectionBadge } from "@/components/features/news/ImpactDirection";
 import { AddAlertButton } from "@/components/features/agenda/AddAlertButton";
-import { EVENT_TYPE_LABEL } from "@/lib/data/categories";
 import { formatEventDay, formatEventTime, formatFullDate, formatPrice } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { getMessages, getLocale } from "@/i18n/server";
 
 // Rendered on demand (not pre-built) so events published in the Sanity
 // Studio show up immediately without a redeploy.
@@ -46,6 +46,7 @@ export default async function AgendaDetailPage({
       : Promise.resolve(undefined),
   ]);
   const completed = event.status === "completed";
+  const [m, locale] = await Promise.all([getMessages(), getLocale()]);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
@@ -54,13 +55,13 @@ export default async function AgendaDetailPage({
         className="mb-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-400 hover:text-ink-950"
       >
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
-        Back to Agenda
+        {m.agenda.backToAgenda}
       </Link>
 
       <div className="flex flex-wrap items-center gap-2 text-[12px] text-ink-400">
         <CategoryTag category={event.category} />
         <span className="rounded-full border border-border px-2 py-0.5 font-medium text-ink-600">
-          {EVENT_TYPE_LABEL[event.eventType]}
+          {m.eventTypes[event.eventType]}
         </span>
         <span
           className={cn(
@@ -68,7 +69,7 @@ export default async function AgendaDetailPage({
             completed ? "bg-surface text-ink-400" : "bg-accent-soft text-accent-ink"
           )}
         >
-          {completed ? "Completed" : "Upcoming"}
+          {completed ? m.agenda.completed : m.agenda.upcoming}
         </span>
       </div>
 
@@ -78,9 +79,9 @@ export default async function AgendaDetailPage({
 
       <p
         className="mt-2 font-data text-[14px] font-medium text-ink-600"
-        title={formatFullDate(event.scheduledAt)}
+        title={formatFullDate(event.scheduledAt, locale)}
       >
-        {formatEventDay(event.scheduledAt)} · {event.timeConfirmed === false ? "Time unconfirmed" : formatEventTime(event.scheduledAt)}
+        {formatEventDay(event.scheduledAt, locale)} · {event.timeConfirmed === false ? m.agenda.timeUnconfirmed : formatEventTime(event.scheduledAt, locale)}
       </p>
 
       <p className="mt-3 text-[15px] leading-relaxed text-ink-600">{event.description}</p>
@@ -97,7 +98,7 @@ export default async function AgendaDetailPage({
         >
           <Newspaper className="h-4 w-4 shrink-0 text-ink-400" strokeWidth={2} />
           <span className="flex-1 text-[13px] text-ink-600">
-            <span className="font-medium text-ink-950">What actually happened:</span>{" "}
+            <span className="font-medium text-ink-950">{m.agenda.whatHappened}</span>{" "}
             {relatedArticle.title}
           </span>
           <ArrowRight className="h-3.5 w-3.5 shrink-0 text-ink-400" strokeWidth={2} />
@@ -111,7 +112,7 @@ export default async function AgendaDetailPage({
         >
           <History className="h-4 w-4 shrink-0 text-ink-400" strokeWidth={2} />
           <span className="flex-1 text-[13px] text-ink-600">
-            <span className="font-medium text-ink-950">Previous occurrence:</span>{" "}
+            <span className="font-medium text-ink-950">{m.agenda.previous}</span>{" "}
             {previousEvent.title}
           </span>
           <ArrowRight className="h-3.5 w-3.5 shrink-0 text-ink-400" strokeWidth={2} />
@@ -119,11 +120,11 @@ export default async function AgendaDetailPage({
       )}
 
       <div className="mt-2">
-        <ArticleSection eyebrow="Consensus" title="Expectations">
+        <ArticleSection eyebrow={m.agenda.consensus} title={m.agenda.expectations}>
           <p>{event.expectations}</p>
         </ArticleSection>
 
-        <ArticleSection eyebrow="Analysis" title="Why it matters">
+        <ArticleSection eyebrow={m.agenda.analysis} title={m.agenda.whyItMatters}>
           <p>{event.whyItMatters}</p>
         </ArticleSection>
 
@@ -131,7 +132,7 @@ export default async function AgendaDetailPage({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
             Scenarios
           </p>
-          <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">Possible scenarios</h2>
+          <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">{m.agenda.scenarios}</h2>
           <p className="mt-1 text-[12.5px] italic text-ink-400">
             Not predictions — a range of outcomes FinLens is watching for.
           </p>
@@ -151,8 +152,8 @@ export default async function AgendaDetailPage({
         </section>
 
         <section className="border-t border-border py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Data</p>
-          <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">Assets to watch</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">{m.agenda.data}</p>
+          <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">{m.agenda.assetsToWatch}</h2>
           <div className="mt-3 divide-y divide-border rounded-lg border border-border">
             {assets.map((asset) => (
               <Link
@@ -168,7 +169,7 @@ export default async function AgendaDetailPage({
                 </div>
                 <div className="flex flex-col items-end">
                   <p className="font-data text-[13.5px] font-medium text-ink-950">
-                    {formatPrice(asset.price)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? "Demo quote" : asset.priceUpdatedAt ? `Last stored quote · ${asset.priceUpdatedAt}` : "No verified quote"}</span>
+                    {formatPrice(asset.price, "USD", locale)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? m.news.demoQuote : asset.priceUpdatedAt ? m.news.storedQuote(asset.priceUpdatedAt) : m.news.noQuote}</span>
                   </p>
                   <PriceChange changePercent={asset.changePercent} size="sm" />
                 </div>
@@ -182,7 +183,7 @@ export default async function AgendaDetailPage({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
               Stay ahead of it
             </p>
-            <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">Alerts</h2>
+            <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">{m.agenda.alerts}</h2>
             <p className="mt-2 text-[13.5px] leading-relaxed text-ink-600">
               Get notified before this event so you have time to review your positions.
             </p>

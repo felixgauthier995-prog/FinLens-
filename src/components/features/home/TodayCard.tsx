@@ -1,11 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, CalendarClock, Sun } from "lucide-react";
 import type { Brief } from "@/lib/brief";
 import { cn } from "@/lib/cn";
-
-const timeFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
+import { useI18n } from "@/i18n/client";
+import { formatEventTime } from "@/lib/format";
 
 export function TodayCard({ brief, hasStocks }: { brief: Brief; hasStocks: boolean }) {
+  const { locale, m } = useI18n();
   const { signals, events, topStory } = brief;
   const quiet = signals.length === 0;
 
@@ -13,15 +16,15 @@ export function TodayCard({ brief, hasStocks }: { brief: Brief; hasStocks: boole
     <section className="rounded-2xl border border-border bg-surface/60 p-5">
       <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-ink-400">
         <Sun className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-        Today on your stocks
+        {m.home.today}
       </div>
 
       <h2 className="mt-2 text-[18px] font-semibold leading-snug text-ink-950">
         {!hasStocks
-          ? "Follow a few stocks to get your daily brief."
+          ? m.home.followToStart
           : quiet
-            ? "No new signals on your stocks in the last 24 hours."
-            : `${signals.length} new signal${signals.length === 1 ? "" : "s"} on your stocks since yesterday`}
+            ? m.home.quiet
+            : m.home.newSignals(signals.length)}
       </h2>
 
       {signals.length > 0 && (
@@ -56,7 +59,7 @@ export function TodayCard({ brief, hasStocks }: { brief: Brief; hasStocks: boole
                 {e.title}
               </Link>
               {e.timeConfirmed !== false && (
-                <span className="shrink-0 text-[12px] text-ink-400">{timeFormatter.format(new Date(e.scheduledAt))}</span>
+                <span className="shrink-0 text-[12px] text-ink-400">{formatEventTime(e.scheduledAt, locale)}</span>
               )}
             </li>
           ))}
@@ -65,7 +68,7 @@ export function TodayCard({ brief, hasStocks }: { brief: Brief; hasStocks: boole
 
       {quiet && topStory && (
         <p className="mt-3 text-[13.5px] text-ink-600">
-          Top story for you:{" "}
+          {m.home.topStory}{" "}
           <Link href={`/news/${topStory.slug}`} className="font-medium text-ink-950 hover:underline">
             {topStory.title}
           </Link>

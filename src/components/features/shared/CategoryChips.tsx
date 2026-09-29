@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/data/categories";
+import { CATEGORY_ORDER } from "@/lib/data/categories";
+import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/cn";
 import type { Category } from "@/lib/types";
 
@@ -13,6 +16,7 @@ export function CategoryChips({
   /** Additional query params to preserve when switching category (e.g. sort, view). */
   extraParams?: Record<string, string | undefined>;
 }) {
+  const { m } = useI18n();
   function hrefFor(category: Category | "all") {
     const params = new URLSearchParams();
     if (category !== "all") params.set("category", category);
@@ -36,7 +40,7 @@ export function CategoryChips({
             : "border-border text-ink-600 hover:bg-surface"
         )}
       >
-        All
+        {m.news.all}
       </Link>
       {CATEGORY_ORDER.map((category) => (
         <Link
@@ -49,7 +53,7 @@ export function CategoryChips({
               : "border-border text-ink-600 hover:bg-surface"
           )}
         >
-          {CATEGORY_LABEL[category]}
+          {m.categories[category]}
         </Link>
       ))}
     </div>

@@ -13,6 +13,8 @@ export interface ProposedSignal {
   horizon: SignalHorizon;
   linkLevel: SignalLinkLevel;
   rationale: string;
+  /** French version of the rationale. */
+  rationaleFr?: string;
   evidenceQuote: string;
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Star } from "lucide-react";
@@ -58,13 +59,15 @@ export function WatchlistView({
     [tickers, thisWeekEvents],
   );
 
-  const [message, setMessage] = useState("Loading saved watchlist…");
+  const { m } = useI18n();
+  const t = m.watchlist;
+  const [message, setMessage] = useState(t.loading);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let alive = true;
     async function load() {
       if (!db) {
-        if (alive) setMessage("Account service unavailable.");
+        if (alive) setMessage(t.accountUnavailable);
         return;
       }
       const {
@@ -73,7 +76,7 @@ export function WatchlistView({
       if (!alive) return;
       if (!user) {
         setItems([]);
-        setMessage("Sign in in Settings to save your watchlist.");
+        setMessage(t.signIn);
         return;
       }
       const { data, error } = await db
@@ -82,7 +85,7 @@ export function WatchlistView({
         .eq("user_id", user.id);
       if (alive) {
         setMessage(
-          error ? "Unable to load your watchlist. Try reloading." : "",
+          error ? t.loadError : "",
         );
         setItems(
           (data ?? []).map((r) => ({
@@ -101,7 +104,8 @@ export function WatchlistView({
       alive = false;
       sub?.data.subscription.unsubscribe();
     };
-  }, []);
+    // t is a constant per language; it only changes when the language does.
+  }, [t]);
   async function update(ticker: string, remove: boolean) {
     if (!db || busy) return;
     setBusy(true);
@@ -110,7 +114,7 @@ export function WatchlistView({
         data: { user },
       } = await db.auth.getUser();
       if (!user) {
-        setMessage("Sign in in Settings first.");
+        setMessage(t.signInFirst);
         return;
       }
       const { error } = remove
@@ -140,9 +144,9 @@ export function WatchlistView({
                 },
               ],
       );
-      setMessage("Saved.");
+      setMessage(t.saved);
     } catch {
-      setMessage("Could not save. Please retry.");
+      setMessage(t.saveError);
     } finally {
       setBusy(false);
     }
@@ -174,8 +178,8 @@ export function WatchlistView({
       {relevantEvents.length > 0 && (
         <div className="mb-8 rounded-xl border border-border bg-surface/60 p-5">
           <SectionHeading
-            eyebrow="Personalized"
-            title="What matters for your portfolio"
+            eyebrow={t.eyebrow}
+            title={t.title}
             className="mb-3"
           />
           <p className="mb-4 text-[13.5px] text-ink-600">
@@ -197,8 +201,8 @@ export function WatchlistView({
       {items.length === 0 ? (
         <EmptyState
           icon={<Star className="h-5 w-5" strokeWidth={2} />}
-          title="Your watchlist is empty"
-          description="Add a stock, ETF, index, or crypto asset to start tracking what matters to you."
+          title={t.emptyTitle}
+          description={t.emptyText}
         />
       ) : (
         <div className="space-y-3">

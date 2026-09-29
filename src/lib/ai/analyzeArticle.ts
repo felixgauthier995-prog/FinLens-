@@ -3,6 +3,15 @@ import { COMPANY_EVENT_TYPES, type CompanyEventType } from "@/lib/types";
 import type { RawNewsArticle } from "@/lib/providers/news/types";
 import type { ProposedSignal } from "@/lib/signals/filter";
 
+export interface ArticleFrench {
+  title: string;
+  whatHappened: string;
+  whyItMatters: string;
+  marketImpact: string;
+  whatToWatch: string[];
+  plainExplanation: string;
+}
+
 export interface ArticleAnalysis {
   category: string;
   impactScoreValue: number;
@@ -14,6 +23,8 @@ export interface ArticleAnalysis {
   affectedAssets: string[];
   /** 2-3 sentences with no jargon, for beginner investors. */
   plainExplanation: string;
+  /** French version of the reader-facing text. */
+  fr: ArticleFrench;
   /** Only meaningful when analyzed with isCompanyNews: true. */
   isMajorCompanyEvent?: boolean;
   companyEventType?: CompanyEventType | null;
@@ -41,7 +52,12 @@ Signals ("signals" array) — per-company catalysts:
 - "confidence": "high" only when the article states a concrete, material fact about the company (a signed contract, reported results, a regulatory decision). "medium" when the effect is likely but depends on details. "low" otherwise. Chain signals are always "low".
 - "horizon": "short" for effects likely to be felt within days (results, guidance, a ruling), "long" for effects that build over months (a multi-year contract, a new market).
 - "rationale": one short plain-language sentence a non-expert understands, explaining why this is good or bad for the company. No certainty about future prices.
-- Emit at most 5 signals. Returning an empty array is correct and expected for most macro stories and opinion pieces.`;
+- Emit at most 5 signals. Returning an empty array is correct and expected for most macro stories and opinion pieces.
+- "rationaleFr": the same rationale in natural French.
+
+French ("fr" object and "rationaleFr"):
+- Translate the headline and your own analysis texts into natural, neutral international French that reads well in Quebec and in Switzerland (no slang, no anglicisms when a common French term exists; keep company names and tickers unchanged; use "action", "résultats", "chiffre d'affaires", "taux directeur").
+- Same meaning and the same hedging as the English. Never add information. "fr.whatToWatch" has the same number of items as "whatToWatch".`;
 
 const COMPANY_EVENT_ADDENDUM = `
 This article was fetched from a specific company's news feed. Additionally:
@@ -60,6 +76,19 @@ const RESPONSE_SCHEMA_BASE = {
   whatToWatch: { type: "array", items: { type: "string" } },
   affectedAssets: { type: "array", items: { type: "string" } },
   plainExplanation: { type: "string" },
+  fr: {
+    type: "object",
+    properties: {
+      title: { type: "string" },
+      whatHappened: { type: "string" },
+      whyItMatters: { type: "string" },
+      marketImpact: { type: "string" },
+      whatToWatch: { type: "array", items: { type: "string" } },
+      plainExplanation: { type: "string" },
+    },
+    required: ["title", "whatHappened", "whyItMatters", "marketImpact", "whatToWatch", "plainExplanation"],
+    additionalProperties: false,
+  },
   signals: {
     type: "array",
     items: {
@@ -71,9 +100,10 @@ const RESPONSE_SCHEMA_BASE = {
         horizon: { type: "string", enum: ["short", "long"] },
         linkLevel: { type: "string", enum: ["direct", "chain"] },
         rationale: { type: "string" },
+        rationaleFr: { type: "string" },
         evidenceQuote: { type: "string" },
       },
-      required: ["ticker", "direction", "confidence", "horizon", "linkLevel", "rationale", "evidenceQuote"],
+      required: ["ticker", "direction", "confidence", "horizon", "linkLevel", "rationale", "rationaleFr", "evidenceQuote"],
       additionalProperties: false,
     },
   },
@@ -88,6 +118,7 @@ const BASE_REQUIRED = [
   "whatToWatch",
   "affectedAssets",
   "plainExplanation",
+  "fr",
   "signals",
 ];
 
@@ -125,7 +156,7 @@ export async function analyzeArticle(
     },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      max_completion_tokens: 3200,
+      max_completion_tokens: 5000,
       messages: [
         { role: "system", content: systemPrompt },
         {
@@ -199,6 +230,18 @@ export function validateAnalysis(
     a.affectedAssets.some((t) => !tickers.includes(t))
   )
     throw new Error("Unknown affected asset");
+  const f = a.fr;
+  if (
+    !f ||
+    typeof f !== "object" ||
+    [f.title, f.whatHappened, f.whyItMatters, f.marketImpact, f.plainExplanation].some(
+      (x) => typeof x !== "string" || x.length > 6000
+    ) ||
+    !Array.isArray(f.whatToWatch) ||
+    f.whatToWatch.length > 5 ||
+    f.whatToWatch.some((x) => typeof x !== "string" || x.length > 1500)
+  )
+    throw new Error("Invalid French version");
   if (!Array.isArray(a.signals)) throw new Error("Invalid signals");
   for (const sig of a.signals) {
     if (
@@ -210,6 +253,7 @@ export function validateAnalysis(
       !["direct", "chain"].includes(sig.linkLevel) ||
       typeof sig.rationale !== "string" ||
       sig.rationale.length > 600 ||
+      (sig.rationaleFr !== undefined && (typeof sig.rationaleFr !== "string" || sig.rationaleFr.length > 800)) ||
       typeof sig.evidenceQuote !== "string" ||
       sig.evidenceQuote.length > 800
     )

@@ -1,6 +1,9 @@
+"use client";
+
 import { TrendingUp, TrendingDown, Shuffle, Eye } from "lucide-react";
 import type { ImpactDirection as Direction } from "@/lib/types";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/i18n/client";
 
 const CONFIG: Record<Direction, { label: string; icon: typeof TrendingUp; className: string }> = {
   positive: {
@@ -26,7 +29,9 @@ const CONFIG: Record<Direction, { label: string; icon: typeof TrendingUp; classN
 };
 
 export function ImpactDirectionBadge({ direction }: { direction: Direction }) {
-  const { label, icon: Icon, className } = CONFIG[direction];
+  const { m } = useI18n();
+  const { icon: Icon, className } = CONFIG[direction];
+  const label = m.impact[direction];
   return (
     <span
       className={cn(

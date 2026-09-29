@@ -14,27 +14,25 @@ import { CATEGORY_ORDER } from "@/lib/data/categories";
 import type { Category, MarketEvent } from "@/lib/types";
 import { formatEventDay } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { getMessages, getLocale } from "@/i18n/server";
+import type { Locale } from "@/i18n/config";
 
 export const metadata: Metadata = {
   title: "Agenda — FinLens",
 };
 
-const VIEWS = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "This Week" },
-  { key: "calendar", label: "Calendar" },
-] as const;
+const VIEWS = ["today", "week", "calendar"] as const;
 
-type ViewKey = (typeof VIEWS)[number]["key"];
+type ViewKey = (typeof VIEWS)[number];
 
 function isCategory(value: string | undefined): value is Category {
   return !!value && (CATEGORY_ORDER as string[]).includes(value);
 }
 
-function groupByDay(events: MarketEvent[]): { label: string; events: MarketEvent[] }[] {
+function groupByDay(events: MarketEvent[], locale: Locale): { label: string; events: MarketEvent[] }[] {
   const groups: { label: string; events: MarketEvent[] }[] = [];
   for (const event of events) {
-    const label = formatEventDay(event.scheduledAt);
+    const label = formatEventDay(event.scheduledAt, locale);
     const last = groups[groups.length - 1];
     if (last && last.label === label) {
       last.events.push(event);
@@ -68,7 +66,9 @@ export default async function AgendaPage({
     events = events.filter((e) => e.category === activeCategory);
   }
 
-  const groups = groupByDay(events);
+  const [m, locale] = await Promise.all([getMessages(), getLocale()]);
+  const groups = groupByDay(events, locale);
+  const viewLabel = { today: m.agenda.today, week: m.agenda.thisWeek, calendar: m.agenda.calendar };
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
@@ -76,25 +76,25 @@ export default async function AgendaPage({
         <h1 className="text-[22px] font-semibold tracking-tight text-ink-950 sm:text-2xl">
           Agenda
         </h1>
-        <p className="mt-1 text-[13.5px] text-ink-400">What could move the market next.</p>
+        <p className="mt-1 text-[13.5px] text-ink-400">{m.agenda.subtitle}</p>
       </div>
 
       <div className="mb-5 flex items-center gap-1 rounded-md border border-border p-0.5 w-fit">
-        {VIEWS.map((v) => {
+        {VIEWS.map((key) => {
           const params2 = new URLSearchParams();
-          if (v.key !== "week") params2.set("view", v.key);
+          if (key !== "week") params2.set("view", key);
           if (activeCategory) params2.set("category", activeCategory);
           const qs = params2.toString();
           return (
             <Link
-              key={v.key}
+              key={key}
               href={qs ? `/agenda?${qs}` : "/agenda"}
               className={cn(
                 "rounded px-3 py-1.5 text-[13px] font-medium transition-colors",
-                view === v.key ? "bg-surface text-ink-950" : "text-ink-400 hover:text-ink-600"
+                view === key ? "bg-surface text-ink-950" : "text-ink-400 hover:text-ink-600"
               )}
             >
-              {v.label}
+              {viewLabel[key]}
             </Link>
           );
         })}
@@ -112,9 +112,9 @@ export default async function AgendaPage({
         <EmptyState
           icon={<CalendarClock className="h-5 w-5" strokeWidth={2} />}
           title={
-            view === "today" ? "No scheduled events remaining today" : "No events in this window"
+            view === "today" ? m.agenda.emptyToday : m.agenda.emptyWindow
           }
-          description="Try a different view or clear the category filter."
+          description={m.agenda.emptyText}
         />
       ) : (
         <div className="space-y-6">

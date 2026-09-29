@@ -1,15 +1,19 @@
 "use client";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/i18n/client";
 
 // Display prices. The amount actually charged is whatever the Stripe price
 // IDs are set to — keep these in sync when you change prices in Stripe.
-const PLANS = [
-  { id: "yearly", label: "Yearly", price: "$59.99", per: "/year", note: "$5.00/month · save 37%" },
-  { id: "monthly", label: "Monthly", price: "$7.99", per: "/month", note: "Billed monthly" },
-] as const;
+const PRICES = { yearly: "$59.99", monthly: "$7.99" } as const;
 
 export function PlanPicker({ trialAvailable }: { trialAvailable: boolean }) {
+  const { m } = useI18n();
+  const t = m.subscribe;
+  const plans = [
+    { id: "yearly", label: t.yearly, price: PRICES.yearly, per: t.perYear, note: t.yearlyNote },
+    { id: "monthly", label: t.monthly, price: PRICES.monthly, per: t.perMonth, note: t.monthlyNote },
+  ] as const;
   const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -24,10 +28,10 @@ export function PlanPicker({ trialAvailable }: { trialAvailable: boolean }) {
         body: JSON.stringify({ plan }),
       });
       const data = await res.json();
-      if (!res.ok || !data.url) throw new Error(data.error || "Couldn't start checkout.");
+      if (!res.ok || !data.url) throw new Error(data.error || t.errCheckout);
       window.location.href = data.url;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't start checkout.");
+      setError(e instanceof Error ? e.message : t.errCheckout);
       setLoading(false);
     }
   }
@@ -35,7 +39,7 @@ export function PlanPicker({ trialAvailable }: { trialAvailable: boolean }) {
   return (
     <div className="mt-auto pt-8">
       <div className="space-y-2.5" role="radiogroup" aria-label="Plan">
-        {PLANS.map((p) => (
+        {plans.map((p) => (
           <button
             key={p.id}
             type="button"
@@ -69,11 +73,11 @@ export function PlanPicker({ trialAvailable }: { trialAvailable: boolean }) {
         disabled={loading}
         className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-ink-950 text-[15px] font-semibold text-white transition-colors hover:bg-ink-800 disabled:bg-ink-300"
       >
-        {loading ? "Opening secure checkout…" : trialAvailable ? "Start free trial" : "Subscribe"}
+        {loading ? t.opening : trialAvailable ? t.startTrial : t.subscribeCta}
       </button>
       <p className="mt-3 text-center text-[11.5px] leading-relaxed text-ink-400">
-        Secure payment by Stripe. Prices in USD. Cancel anytime from Settings.
-        {trialAvailable && " You'll get a reminder before your trial ends."}
+        {t.footer}
+        {trialAvailable && t.footerTrial}
       </p>
     </div>
   );

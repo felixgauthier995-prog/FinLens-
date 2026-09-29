@@ -1,4 +1,3 @@
-import { editorialArticles } from "@/lib/data/editorial";
 import { demoMode } from "@/lib/data/mode";
 import type { Category, ImpactDirection, NewsArticle } from "@/lib/types";
 import { makeImpact } from "@/lib/impact";
@@ -420,8 +419,6 @@ export async function getArticlesForAsset(ticker: string): Promise<NewsArticle[]
 }
 
 export async function getArticlesSorted(): Promise<NewsArticle[]> {
- const [automatic,manual]=await Promise.all([automaticRecords(),editorialArticles()]);
- const combined = new Map<string,NewsArticle>();
- for(const item of [...automatic,...manual]) combined.set(item.sourceUrl || item.slug,item);
- return [...combined.values()].sort((a,b)=>Date.parse(b.publishedAt)-Date.parse(a.publishedAt));
+  const articles = await automaticRecords();
+  return [...articles].sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
 }

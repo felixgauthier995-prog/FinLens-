@@ -3,10 +3,14 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { getArticlesSorted } from "@/lib/data/news";
 import { getEventsSorted } from "@/lib/data/events";
+import { requireAppAccess } from "@/lib/account";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppGroupLayout({ children }: { children: ReactNode }) {
+  // Everything in the app needs an account, a finished questionnaire and an
+  // active subscription or trial.
+  await requireAppAccess();
   const [articles, events] = await Promise.all([getArticlesSorted(), getEventsSorted()]);
 
   return (

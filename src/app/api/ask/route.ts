@@ -1,4 +1,4 @@
-import { requestUser } from "@/lib/security/user";
+import { requestPaidUser } from "@/lib/security/user";
 import { reserveQuota } from "@/lib/security/quota";
 import { getArticlesSorted } from "@/lib/data/news";
 import { getEventsSorted } from "@/lib/data/events";
@@ -6,10 +6,10 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
-    const user = await requestUser(request);
+    const user = await requestPaidUser(request);
     if (!user)
       return Response.json(
-        { error: "Sign in in Settings to use Ask FinLens." },
+        { error: "Ask FinLens needs an active subscription or trial." },
         { status: 401 },
       );
     if (!process.env.OPENAI_API_KEY)

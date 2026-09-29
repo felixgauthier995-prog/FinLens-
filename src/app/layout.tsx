@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
@@ -21,6 +21,20 @@ export const metadata: Metadata = {
   title: "FinLens — What matters in the market today",
   description:
     "FinLens scans the financial world and tells you what matters, why it matters, what it could affect, and what is coming next.",
+  applicationName: "FinLens",
+  appleWebApp: {
+    capable: true,
+    title: "FinLens",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

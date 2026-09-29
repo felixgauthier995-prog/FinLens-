@@ -64,7 +64,7 @@ export default async function WelcomePage() {
 
       <div className="mt-auto pt-12">
         <Link
-          href="/login"
+          href="/login?mode=signup"
           className="flex h-12 w-full items-center justify-center rounded-xl bg-ink-950 text-[15px] font-semibold text-white transition-colors hover:bg-ink-800"
         >
           Start your 7-day free trial

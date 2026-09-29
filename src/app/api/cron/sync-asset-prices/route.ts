@@ -2,7 +2,7 @@ import { isCronAuthorized } from "@/lib/security/cron";
 import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { fetchQuotes } from "@/lib/providers/prices/fmp";
-import { ASSETS } from "@/lib/data/assets";
+import { tickersToRefresh } from "@/lib/data/followed";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,9 @@ export async function GET(request: Request) {
   }
 
   const startedAt = new Date().toISOString();
-  const tickers = ASSETS.map((a) => a.ticker);
+  // FMP free tier ≈ 250 calls/day, one call per ticker: followed stocks
+  // first, then the core list, 40 per run.
+  const tickers = await tickersToRefresh(40);
   const quotes = await fetchQuotes(tickers, fmpKey);
 
   let itemsUpdated = 0;

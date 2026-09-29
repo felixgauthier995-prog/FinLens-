@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 
 export interface AccountSummary {
   email: string;
@@ -53,6 +54,12 @@ export function AccountPanel({ account }: { account: AccountSummary }) {
         >
           {busy ? "Opening…" : "Manage subscription"}
         </button>
+        <Link
+          href="/reset-password"
+          className="rounded-md border border-border-strong px-3.5 py-2 text-[13px] font-medium text-ink-950 hover:bg-surface"
+        >
+          Change password
+        </Link>
         <form action="/auth/signout" method="post">
           <button className="rounded-md px-3.5 py-2 text-[13px] font-medium text-ink-600 hover:bg-surface hover:text-ink-950">
             Sign out

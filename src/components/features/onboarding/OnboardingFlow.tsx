@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   EXPERIENCE_OPTIONS,
@@ -107,11 +107,21 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [risk, setRisk] = useState<Risk | null>(null);
   const [tickers, setTickers] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [saving, startSaving] = useTransition();
 
   const step = STEPS[stepIndex];
   const { suggested, others } = useMemo(() => suggestAssets(assets, sectors), [assets, sectors]);
+  const q = query.trim().toLowerCase();
+  const searchResults = useMemo(
+    () =>
+      q
+        ? assets.filter((a) => a.ticker.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)).slice(0, 20)
+        : [],
+    [assets, q]
+  );
+  const selectedAssets = assets.filter((a) => tickers.includes(a.ticker));
 
   const canContinue =
     (step === "experience" && experience) ||
@@ -192,26 +202,66 @@ export function OnboardingFlow({ assets }: { assets: PickableAsset[] }) {
 
         {step === "stocks" && (
           <>
-            {suggested.length > 0 && (
-              <>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Suggested for you</p>
-                <div className="grid gap-2">
-                  {suggested.map((a) => (
-                    <StockChip key={a.ticker} asset={a} selected={tickers.includes(a.ticker)} disabled={atMax} onToggle={() => setTickers(toggle(tickers, a.ticker))} />
-                  ))}
-                </div>
-              </>
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" strokeWidth={2} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search a company or ticker (e.g. Disney, NFLX)"
+                aria-label="Search stocks"
+                className="h-11 w-full rounded-xl border border-border-strong pl-10 pr-3 text-[14px] text-ink-950 outline-none placeholder:text-ink-300 focus:border-accent"
+              />
+            </label>
+
+            {selectedAssets.length > 0 && !q && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {selectedAssets.map((a) => (
+                  <button
+                    key={a.ticker}
+                    type="button"
+                    onClick={() => setTickers(toggle(tickers, a.ticker))}
+                    className="font-data inline-flex items-center gap-1 rounded-full bg-ink-950 px-2.5 py-1 text-[12px] font-semibold text-white"
+                    aria-label={`Remove ${a.ticker}`}
+                  >
+                    {a.ticker} <span aria-hidden="true">×</span>
+                  </button>
+                ))}
+              </div>
             )}
-            {others.length > 0 && (
+
+            {q ? (
+              <div className="grid gap-2 pt-2">
+                {searchResults.length === 0 && (
+                  <p className="py-6 text-center text-[13px] text-ink-400">No company matches “{query}”.</p>
+                )}
+                {searchResults.map((a) => (
+                  <StockChip key={a.ticker} asset={a} selected={tickers.includes(a.ticker)} disabled={atMax} onToggle={() => setTickers(toggle(tickers, a.ticker))} />
+                ))}
+              </div>
+            ) : (
               <>
-                <p className="pt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-                  {suggested.length > 0 ? "More" : "Available"}
-                </p>
+                {suggested.length > 0 && (
+                  <>
+                    <p className="pt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-400">Suggested for you</p>
+                    <div className="grid gap-2">
+                      {suggested.slice(0, 12).map((a) => (
+                        <StockChip key={a.ticker} asset={a} selected={tickers.includes(a.ticker)} disabled={atMax} onToggle={() => setTickers(toggle(tickers, a.ticker))} />
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="pt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-400">Popular</p>
                 <div className="grid gap-2">
-                  {others.map((a) => (
-                    <StockChip key={a.ticker} asset={a} selected={tickers.includes(a.ticker)} disabled={atMax} onToggle={() => setTickers(toggle(tickers, a.ticker))} />
-                  ))}
+                  {others
+                    .filter((a) => ["AAPL", "NVDA", "TSLA", "MSFT", "AMZN", "GOOGL", "META", "SPY"].includes(a.ticker))
+                    .map((a) => (
+                      <StockChip key={a.ticker} asset={a} selected={tickers.includes(a.ticker)} disabled={atMax} onToggle={() => setTickers(toggle(tickers, a.ticker))} />
+                    ))}
                 </div>
+                <p className="pt-2 text-center text-[12.5px] text-ink-400">
+                  {assets.length} companies available — use the search to find yours.
+                </p>
               </>
             )}
           </>

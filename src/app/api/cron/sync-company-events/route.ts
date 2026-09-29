@@ -7,6 +7,7 @@ import { fetchCompanyNews } from "@/lib/providers/news/finnhub";
 import { analyzeArticle } from "@/lib/ai/analyzeArticle";
 import { fetchQuotes } from "@/lib/providers/prices/fmp";
 import { ASSETS } from "@/lib/data/assets";
+import { tickersToRefresh } from "@/lib/data/followed";
 import type { RawNewsArticle } from "@/lib/providers/news/types";
 import { storeSignals } from "@/lib/signals/store";
 
@@ -68,7 +69,8 @@ export async function GET(request: Request) {
   try {
     const to = new Date();
     const from = new Date(to.getTime() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-    const tickers = ASSETS.map((a) => a.ticker);
+    // Finnhub free tier: 60 calls/minute. Followed stocks first, 30 per run.
+    const tickers = await tickersToRefresh(30);
 
     // Fetch per-ticker company news in parallel; one ticker failing
     // doesn't take down the others.

@@ -30,6 +30,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Everything except API routes, the Sanity studio, Next internals and static files.
-    "/((?!api|studio|_next/static|_next/image|favicon.ico|icon.png|manifest.webmanifest|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
+    "/((?!api|studio|_next/static|_next/image|favicon.ico|icon.png|manifest.webmanifest|sw.js|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
   ],
 };

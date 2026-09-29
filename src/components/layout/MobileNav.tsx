@@ -18,7 +18,8 @@ export function MobileNav() {
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)] md:hidden"
       aria-label="Primary"
     >
-      {NAV_ITEMS.map((item) => {
+      {/* Five tabs fit a phone: "My week" replaces the full Agenda here. */}
+      {NAV_ITEMS.filter((item) => item.href !== "/agenda").map((item) => {
         const active = isActive(pathname, item.href);
         const Icon = item.icon;
         return (
@@ -33,7 +34,7 @@ export function MobileNav() {
               strokeWidth={active ? 2.25 : 2}
             />
             <span className={active ? "text-ink-950" : "text-ink-400"}>
-              {item.label === "Ask FinLens" ? "Ask" : item.label}
+              {item.label === "Ask FinLens" ? "Ask" : item.label === "My week" ? "Week" : item.label}
             </span>
           </Link>
         );

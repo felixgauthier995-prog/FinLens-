@@ -11,6 +11,8 @@ export interface Profile {
   sectors: string[];
   risk: "cautious" | "balanced" | "aggressive" | null;
   onboardingCompletedAt: string | null;
+  notifySignals: boolean;
+  notifyMorning: boolean;
 }
 
 export interface Account {
@@ -32,7 +34,7 @@ export const getAccount = cache(async function getAccount(): Promise<Account | n
   const [profileRes, subRes] = await Promise.all([
     db
       .from("profiles")
-      .select("experience, goal, sectors, risk, onboarding_completed_at")
+      .select("experience, goal, sectors, risk, onboarding_completed_at, notify_signals, notify_morning")
       .eq("user_id", user.id)
       .maybeSingle(),
     db
@@ -50,6 +52,8 @@ export const getAccount = cache(async function getAccount(): Promise<Account | n
         sectors: p.sectors ?? [],
         risk: p.risk,
         onboardingCompletedAt: p.onboarding_completed_at,
+        notifySignals: p.notify_signals ?? true,
+        notifyMorning: p.notify_morning ?? true,
       }
     : null;
 

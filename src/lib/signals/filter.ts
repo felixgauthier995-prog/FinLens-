@@ -19,6 +19,15 @@ export interface ProposedSignal {
 export const MAX_SIGNALS_PER_ARTICLE = 5;
 const MIN_QUOTE_LENGTH = 12;
 
+/** Unify quotes/dashes and collapse whitespace, keeping capitals. */
+function unifyPunctuation(text: string): string {
+  return text
+    .replace(/[\u2018\u2019\u201a\u201b]/g, "'")
+    .replace(/[\u201c\u201d\u201e\u201f]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\s+/g, " ");
+}
+
 /** Lowercase, unify quotes/dashes, collapse whitespace — so a quote copied
  * with slightly different punctuation still matches the source. */
 export function normalizeText(text: string): string {
@@ -50,20 +59,24 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Whether the article names the company, by ticker or by the first
- * distinctive word of its name ("NVIDIA", "Taiwan", "Advanced"...). */
+/**
+ * Whether the article names the company: one of its identifying names as
+ * a whole word, with its capitals (so "Intel" isn't matched by "intel" and
+ * "Target" isn't matched by "target"), or its ticker in capitals when it is
+ * at least 3 letters. Short tickers like "T", "C" or "F" are never matched
+ * on their own — they appear in ordinary text.
+ */
 export function companyNamedIn(
   ticker: string,
-  companyName: string | undefined,
+  names: string[],
   sourceText: string
 ): boolean {
-  const text = normalizeText(sourceText);
-  const candidates = [ticker];
-  const firstWord = companyName?.split(/[\s,.]+/)[0];
-  if (firstWord && firstWord.length >= 3) candidates.push(firstWord);
-  return candidates.some((c) =>
-    new RegExp(`(^|[^a-z0-9])${escapeRegExp(c.toLowerCase())}([^a-z0-9]|$)`).test(text)
-  );
+  const text = unifyPunctuation(sourceText);
+  const wholeWord = (needle: string) =>
+    new RegExp(`(^|[^A-Za-z0-9])${escapeRegExp(needle)}([^A-Za-z0-9]|$)`).test(text);
+  if (names.some((n) => n.trim().length >= 2 && wholeWord(unifyPunctuation(n).trim()))) return true;
+  if (ticker.length < 3) return false;
+  return wholeWord(ticker) || text.includes(`$${ticker}`);
 }
 
 /**
@@ -77,7 +90,7 @@ export function companyNamedIn(
 export function filterSignals(
   proposed: ProposedSignal[],
   sourceText: string,
-  companyNames: Map<string, string>
+  companyNames: Map<string, string[]>
 ): ProposedSignal[] {
   const seen = new Set<string>();
   const kept: ProposedSignal[] = [];
@@ -91,7 +104,7 @@ export function filterSignals(
     let linkLevel = s.linkLevel;
     if (
       linkLevel === "direct" &&
-      !companyNamedIn(s.ticker, companyNames.get(s.ticker), sourceText)
+      !companyNamedIn(s.ticker, companyNames.get(s.ticker) ?? [], sourceText)
     ) {
       linkLevel = "chain";
     }

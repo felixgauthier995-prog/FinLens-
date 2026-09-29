@@ -11,10 +11,11 @@ export const metadata: Metadata = { title: "Sign in — FinLens" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; mode?: string }>;
 }) {
   if (await getAccount()) redirect("/");
-  const { error } = await searchParams;
+  const { error, mode } = await searchParams;
+  const signup = mode === "signup";
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-6 py-10">
@@ -27,17 +28,19 @@ export default async function LoginPage({
       </Link>
       <Logo className="mt-8" />
       <h1 className="mt-8 text-[26px] font-semibold tracking-tight text-ink-950">
-        Sign in or create an account
+        {signup ? "Create your account" : "Welcome back"}
       </h1>
       <p className="mt-2 text-[14.5px] leading-relaxed text-ink-600">
-        Enter your email and we&apos;ll send you a secure link. No password needed.
+        {signup
+          ? "Start with a 7-day free trial. No charge today."
+          : "Sign in to see what moves your stocks."}
       </p>
       {error && (
         <p role="alert" className="mt-5 rounded-lg bg-negative-soft px-3.5 py-2.5 text-[13px] text-negative">
-          That sign-in link has expired or was already used. Request a new one below.
+          That link has expired or was already used. Sign in below, or request a new link.
         </p>
       )}
-      <LoginForm />
+      <LoginForm initialMode={signup ? "signup" : "signin"} />
     </main>
   );
 }

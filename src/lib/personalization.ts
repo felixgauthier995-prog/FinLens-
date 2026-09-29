@@ -23,6 +23,8 @@ const SECTOR_CATEGORIES: Record<Sector, Category[]> = {
   energy: ["energy"],
   financials: ["financials"],
   consumer: ["earnings"],
+  media: ["tech"],
+  industrials: ["geopolitics", "policy"],
   crypto: ["crypto"],
   healthcare: ["healthcare"],
   broad: ["macro", "policy"],

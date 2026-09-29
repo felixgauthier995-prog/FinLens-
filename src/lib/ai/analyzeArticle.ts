@@ -125,7 +125,7 @@ export async function analyzeArticle(
     },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      max_completion_tokens: 2200,
+      max_completion_tokens: 3200,
       messages: [
         { role: "system", content: systemPrompt },
         {

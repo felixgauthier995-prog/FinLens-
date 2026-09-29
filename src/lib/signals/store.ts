@@ -1,14 +1,13 @@
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { reserveIngestionAiCall } from "@/lib/security/aiBudget";
 import { fetchQuotes } from "@/lib/providers/prices/fmp";
-import { ASSETS } from "@/lib/data/assets";
+import { COMPANY_NAMES } from "@/lib/data/assets";
 import type { RawNewsArticle } from "@/lib/providers/news/types";
 import { filterSignals, type ProposedSignal } from "@/lib/signals/filter";
 import { verifySignals } from "@/lib/signals/verify";
 
 export const SIGNAL_INDEX_TICKER = "SPY";
 
-const COMPANY_NAMES = new Map(ASSETS.map((a) => [a.ticker, a.name]));
 
 interface StoreSignalsOptions {
   openaiKey: string;

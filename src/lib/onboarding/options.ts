@@ -14,13 +14,15 @@ export const GOAL_OPTIONS = [
 ] as const;
 
 export const SECTOR_OPTIONS = [
-  { value: "tech", label: "Tech", assetSectors: ["Technology"] },
-  { value: "ai", label: "AI & chips", assetSectors: ["Semiconductors", "Technology"] },
-  { value: "energy", label: "Energy & oil", assetSectors: ["Energy"], assetTypes: ["commodity"] },
+  { value: "tech", label: "Tech & software", assetSectors: ["Technology"] },
+  { value: "ai", label: "AI & chips", assetSectors: ["Semiconductors"] },
+  { value: "energy", label: "Energy & oil", assetSectors: ["Energy", "Utilities"], assetTypes: ["commodity"] },
   { value: "financials", label: "Banks & finance", assetSectors: ["Financials"] },
-  { value: "consumer", label: "Consumer & retail", assetSectors: ["Consumer Discretionary", "Automotive"] },
+  { value: "consumer", label: "Consumer & retail", assetSectors: ["Consumer Discretionary", "Consumer Staples", "Automotive"] },
+  { value: "media", label: "Media & entertainment", assetSectors: ["Communication Services"] },
+  { value: "healthcare", label: "Healthcare & pharma", assetSectors: ["Healthcare"] },
+  { value: "industrials", label: "Industry & defense", assetSectors: ["Industrials", "Materials"] },
   { value: "crypto", label: "Crypto", assetTypes: ["crypto"] },
-  { value: "healthcare", label: "Healthcare", assetSectors: ["Healthcare"] },
   { value: "broad", label: "The whole market", assetSectors: ["Broad Market"], assetTypes: ["etf"] },
 ] as const;
 

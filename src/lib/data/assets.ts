@@ -1,13 +1,14 @@
 import { demoMode } from "@/lib/data/mode";
 import type { Asset } from "@/lib/types";
 import { supabaseServerClient } from "@/lib/supabase/server";
+import { UNIVERSE, CORE_NAMES } from "@/lib/data/universe";
 
 /**
  * Mock market data. Prices and changes are illustrative fictional values,
  * not live quotes. A production build would source this from a market
  * data provider (see MarketEvent/NewsArticle affectedAssets for the join key).
  */
-export const ASSETS: Asset[] = [
+const CORE_ASSETS: Asset[] = [
   {
     ticker: "AAPL",
     name: "Apple Inc.",
@@ -201,6 +202,35 @@ export const ASSETS: Asset[] = [
     currency: "USD",
   },
 ];
+
+/** Core assets (with demo fallback prices) plus the wider company universe
+ * (no demo price: shown as unavailable until a real quote is stored). */
+export const ASSETS: Asset[] = [
+  ...CORE_ASSETS,
+  ...UNIVERSE.filter((u) => !CORE_ASSETS.some((a) => a.ticker === u.ticker)).map(
+    (u): Asset => ({
+      ticker: u.ticker,
+      name: u.name,
+      assetType: u.assetType ?? "equity",
+      sector: u.sector,
+      price: null,
+      changePercent: null,
+      changeAbsolute: null,
+      currency: "USD",
+    })
+  ),
+];
+
+/** Tickers of the original core list — always kept in price syncs. */
+export const CORE_TICKERS: string[] = CORE_ASSETS.map((a) => a.ticker);
+
+/** Phrases that identify each company in an article (for signal checks). */
+export const COMPANY_NAMES: Map<string, string[]> = new Map(
+  ASSETS.map((a) => [
+    a.ticker,
+    UNIVERSE.find((u) => u.ticker === a.ticker)?.names ?? CORE_NAMES[a.ticker] ?? [],
+  ])
+);
 
 function getAssetMeta(ticker: string): Asset | undefined {
   return ASSETS.find((a) => a.ticker === ticker);

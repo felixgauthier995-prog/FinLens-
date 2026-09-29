@@ -10,9 +10,9 @@ import {
 import { validateAnalysis } from "../src/lib/ai/analyzeArticle";
 
 const NAMES = new Map([
-  ["NVDA", "NVIDIA Corporation"],
-  ["TSM", "Taiwan Semiconductor Manufacturing"],
-  ["MSFT", "Microsoft Corporation"],
+  ["NVDA", ["Nvidia", "NVIDIA"]],
+  ["TSM", ["TSMC", "Taiwan Semiconductor"]],
+  ["MSFT", ["Microsoft"]],
 ]);
 const TEXT =
   "Microsoft signs $10 billion deal for NVIDIA chips\n" +
@@ -38,8 +38,8 @@ test("quotes must really appear in the article (curly quotes tolerated)", () => 
 });
 
 test("company must be named for a direct link", () => {
-  assert.equal(companyNamedIn("NVDA", NAMES.get("NVDA"), TEXT), true);
-  assert.equal(companyNamedIn("TSM", NAMES.get("TSM"), TEXT), false);
+  assert.equal(companyNamedIn("NVDA", NAMES.get("NVDA")!, TEXT), true);
+  assert.equal(companyNamedIn("TSM", NAMES.get("TSM")!, TEXT), false);
 });
 
 test("filterSignals drops invented quotes and unknown tickers", () => {
@@ -91,4 +91,15 @@ test("malformed signals are rejected by validation", () => {
   assert.doesNotThrow(() => validateAnalysis({ ...base, signals: [sig({})] }, ["NVDA"]));
   assert.throws(() => validateAnalysis({ ...base, signals: [sig({ direction: "up" as never })] }, ["NVDA"]));
   assert.throws(() => validateAnalysis(base, ["NVDA"]));
+});
+
+test("short tickers and common words never count as naming a company", () => {
+  const text = "Analysts don't expect the C-suite at Target Health to change course; intel from suppliers is mixed.";
+  assert.equal(companyNamedIn("T", ["AT&T"], text), false); // "don't"
+  assert.equal(companyNamedIn("C", ["Citigroup", "Citi"], text), false); // "C-suite"
+  assert.equal(companyNamedIn("INTC", ["Intel"], text), false); // lowercase "intel"
+  assert.equal(companyNamedIn("TGT", ["Target Corp", "Target's"], text), false);
+  assert.equal(companyNamedIn("T", ["AT&T"], "AT&T raised its dividend."), true);
+  assert.equal(companyNamedIn("DIS", ["Disney"], "The Walt Disney Company beat estimates."), true);
+  assert.equal(companyNamedIn("RTX", ["RTX", "Raytheon"], "Pentagon awards RTX's Raytheon a contract"), true);
 });

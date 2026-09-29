@@ -12,6 +12,9 @@ import { ImpactDirectionBadge } from "@/components/features/news/ImpactDirection
 import { ArticleSection } from "@/components/features/news/ArticleSection";
 import { SignalList } from "@/components/features/news/SignalList";
 import { getSignalTrackRecord } from "@/lib/data/signals";
+import { getUserPreferences } from "@/lib/data/preferences";
+import { signalsForUser, showsIndirectSignals } from "@/lib/personalization";
+import { Lightbulb } from "lucide-react";
 import { formatFullDate, formatRelativeTime, formatPrice } from "@/lib/format";
 
 // Rendered on demand (not pre-built) so articles published in the Sanity
@@ -42,7 +45,12 @@ export default async function NewsDetailPage({
 
   const assets = await getAssets(article.affectedAssets);
   const relatedEvent = article.relatedEventSlug ? await getEvent(article.relatedEventSlug) : undefined;
-  const trackRecord = article.signals?.length ? await getSignalTrackRecord() : undefined;
+  const prefs = await getUserPreferences();
+  const visibleSignals = article.signals ? signalsForUser(article.signals, prefs) : [];
+  const hiddenIndirect = (article.signals?.length ?? 0) - visibleSignals.length;
+  const trackRecord = visibleSignals.length ? await getSignalTrackRecord() : undefined;
+  const showPlain =
+    !!article.plainExplanation && (prefs.experience === "beginner" || prefs.experience === "intermediate");
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
@@ -66,6 +74,16 @@ export default async function NewsDetailPage({
         {article.title}
       </h1>
       <p className="mt-3 text-[15.5px] leading-relaxed text-ink-600">{article.summary}</p>
+
+      {showPlain && (
+        <div className="mt-5 flex gap-3 rounded-xl bg-accent-soft p-4">
+          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" strokeWidth={2} aria-hidden="true" />
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-accent-ink">In plain words</p>
+            <p className="mt-1 text-[14.5px] leading-relaxed text-ink-800">{article.plainExplanation}</p>
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <ImpactScore score={article.impactScore} />
@@ -93,9 +111,15 @@ export default async function NewsDetailPage({
           <p>{article.whyItMatters}</p>
         </ArticleSection>
 
-        {article.signals && article.signals.length > 0 && (
+        {visibleSignals.length > 0 && (
           <ArticleSection eyebrow="Signals" title="Who could be affected">
-            <SignalList signals={article.signals} trackRecord={trackRecord} />
+            <SignalList signals={visibleSignals} trackRecord={trackRecord} />
+            {hiddenIndirect > 0 && !showsIndirectSignals(prefs) && (
+              <p className="mt-2 text-[12px] text-ink-400">
+                {hiddenIndirect} lower-confidence indirect lead{hiddenIndirect === 1 ? "" : "s"} hidden based on
+                your profile.
+              </p>
+            )}
           </ArticleSection>
         )}
 

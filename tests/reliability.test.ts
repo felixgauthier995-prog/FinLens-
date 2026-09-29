@@ -12,6 +12,7 @@ const valid = {
   marketImpact: "Uncertain.",
   whatToWatch: ["Next report"],
   affectedAssets: ["SPY"],
+  plainExplanation: "Something happened.",
   signals: [],
 };
 test("rejects invented tickers and invalid impact scores", () => {

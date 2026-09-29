@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createSessionClient } from "@/lib/supabase/session";
@@ -20,7 +21,7 @@ export interface Account {
 }
 
 /** The signed-in user with their profile and subscription, or null. */
-export async function getAccount(): Promise<Account | null> {
+export const getAccount = cache(async function getAccount(): Promise<Account | null> {
   const db = await createSessionClient();
   if (!db) return null;
   const {
@@ -65,7 +66,7 @@ export async function getAccount(): Promise<Account | null> {
     : null;
 
   return { user, profile, subscription, hasAccess: hasPaidAccess(subscription) };
-}
+});
 
 /**
  * Gate for the app: signed in → questionnaire done → paying (or trialing).

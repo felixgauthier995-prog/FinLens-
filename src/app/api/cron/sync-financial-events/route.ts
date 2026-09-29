@@ -1,3 +1,4 @@
+import { isCronAuthorized } from "@/lib/security/cron";
 import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { createFmpEventProvider } from "@/lib/providers/events/fmp";
@@ -13,13 +14,6 @@ function extractErrorMessage(err: unknown): string {
   return message.replace(/(?:sk-[A-Za-z0-9_-]+|(?:token|apikey|key)=\S+)/gi,"[redacted]").slice(0,300);
 }
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const header = request.headers.get("authorization");
-  return header === `Bearer ${secret}`;
-}
-
 async function upsertStocksForTickers(tickers: Set<string>) {
   if (tickers.size === 0 || !supabaseAdminClient) return;
   const rows = Array.from(tickers).map((ticker) => ({ ticker }));
@@ -32,7 +26,7 @@ async function upsertStocksForTickers(tickers: Set<string>) {
 }
 
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!supabaseAdminClient) {

@@ -12,6 +12,8 @@ export interface ArticleAnalysis {
   marketImpact: string;
   whatToWatch: string[];
   affectedAssets: string[];
+  /** 2-3 sentences with no jargon, for beginner investors. */
+  plainExplanation: string;
   /** Only meaningful when analyzed with isCompanyNews: true. */
   isMajorCompanyEvent?: boolean;
   companyEventType?: CompanyEventType | null;
@@ -29,6 +31,7 @@ Rules:
 - "impactScoreValue" (1-10) reflects how significant this news is for markets generally, not for any one stock.
 - Keep "whatHappened" factual and concise. Keep "whyItMatters" and "marketImpact" as analysis, clearly hedged where the future is uncertain.
 - "whatToWatch" is 2-3 short bullet points of concrete things to watch next.
+- "plainExplanation": 2-3 short sentences for someone who has never invested. No jargon (no "guidance", "margins", "basis points", "multiple" — or explain them in everyday words). Say what happened and why a regular person might care. No predictions.
 
 Signals ("signals" array) — per-company catalysts:
 - A signal says whether this news is GOOD or BAD for one specific company's business, from the known-tickers list only. It is an assessment of the news, not a prediction of the share price.
@@ -56,6 +59,7 @@ const RESPONSE_SCHEMA_BASE = {
   marketImpact: { type: "string" },
   whatToWatch: { type: "array", items: { type: "string" } },
   affectedAssets: { type: "array", items: { type: "string" } },
+  plainExplanation: { type: "string" },
   signals: {
     type: "array",
     items: {
@@ -83,6 +87,7 @@ const BASE_REQUIRED = [
   "marketImpact",
   "whatToWatch",
   "affectedAssets",
+  "plainExplanation",
   "signals",
 ];
 
@@ -178,6 +183,8 @@ export function validateAnalysis(
     !["positive", "negative", "mixed", "neutral"].includes(a.impactDirection)
   )
     throw new Error("Invalid analysis classification");
+  if (typeof a.plainExplanation !== "string" || a.plainExplanation.length > 1200)
+    throw new Error("Invalid plain explanation");
   for (const s of [a.whatHappened, a.whyItMatters, a.marketImpact])
     if (typeof s !== "string" || !s.trim() || s.length > 6000)
       throw new Error("Invalid analysis text");

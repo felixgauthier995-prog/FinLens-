@@ -1,5 +1,5 @@
 import { supabaseAdminClient } from "@/lib/supabase/admin";
-import { reserveQuota } from "@/lib/security/quota";
+import { reserveIngestionAiCall } from "@/lib/security/aiBudget";
 import { fetchQuotes } from "@/lib/providers/prices/fmp";
 import { ASSETS } from "@/lib/data/assets";
 import type { RawNewsArticle } from "@/lib/providers/news/types";
@@ -7,7 +7,6 @@ import { filterSignals, type ProposedSignal } from "@/lib/signals/filter";
 import { verifySignals } from "@/lib/signals/verify";
 
 export const SIGNAL_INDEX_TICKER = "SPY";
-const AI_DAILY_CEILING = 200;
 
 const COMPANY_NAMES = new Map(ASSETS.map((a) => [a.ticker, a.name]));
 
@@ -43,7 +42,7 @@ export async function storeSignals(
     const verificationOn = process.env.SIGNAL_VERIFICATION !== "off";
     if (
       verificationOn &&
-      (await reserveQuota(`ai-global:${new Date().toISOString().slice(0, 10)}`, AI_DAILY_CEILING))
+      (await reserveIngestionAiCall())
     ) {
       const result = await verifySignals(article, filtered, openaiKey);
       kept = result.kept;

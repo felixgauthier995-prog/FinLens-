@@ -2,12 +2,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/ui/Card";
 import { MarketPulseStrip } from "@/components/features/home/MarketPulseStrip";
-import { MarketBrief } from "@/components/features/home/MarketBrief";
 import { WatchlistSnapshot } from "@/components/features/home/WatchlistSnapshot";
 import { NewsCard } from "@/components/features/news/NewsCard";
 import { EventRow } from "@/components/features/agenda/EventRow";
 import { getArticlesSorted } from "@/lib/data/news";
-import { getUpcomingEvents } from "@/lib/data/events";
+import { getUpcomingEvents, getEventsSorted } from "@/lib/data/events";
+import { buildBrief } from "@/lib/brief";
+import { TodayCard } from "@/components/features/home/TodayCard";
 import { getUserPreferences } from "@/lib/data/preferences";
 import { rankForUser } from "@/lib/personalization";
 
@@ -18,11 +19,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 export default async function HomePage() {
-  const [articles, upcomingEvents, prefs] = await Promise.all([
+  const [articles, upcomingEvents, prefs, allEvents] = await Promise.all([
     getArticlesSorted(),
     getUpcomingEvents(3),
     getUserPreferences(),
+    getEventsSorted(),
   ]);
+  const brief = buildBrief(prefs, articles, allEvents);
   const forYou = rankForUser(articles, prefs).slice(0, 6);
 
   return (
@@ -34,12 +37,14 @@ export default async function HomePage() {
         </h1>
       </div>
 
-      <MarketPulseStrip />
+      <TodayCard brief={brief} hasStocks={prefs.tickers.length > 0} />
+
+      <div className="mt-6">
+        <MarketPulseStrip />
+      </div>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
-          <MarketBrief />
-
           <div>
             <SectionHeading
               eyebrow="Your stocks and interests first"

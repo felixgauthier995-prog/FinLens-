@@ -68,3 +68,9 @@ The app is now private: every page in `(app)` requires (1) a signed-in user, (2)
 - ~137 companies (core list in `assets.ts` + `src/lib/data/universe.ts`). The AI can attach signals to any of them. A "direct" signal requires the company to be named in the article, checked case-sensitively against its identifying names; 1–2 letter tickers (T, C, F, V…) are never matched on their own.
 - Free API quotas: price refresh = followed stocks first, then core, 40 tickers per run, every 2 hours on US market days (≈160 FMP calls/day). Company news = followed stocks first, 30 tickers per run.
 - Accounts: email + password (min 8 chars), with email confirmation, "forgot password" (email link → `/reset-password`), "Change password" in Settings, and the email sign-in link kept as an option. Existing accounts without a password use "Forgot password?" once to set one.
+
+## Retention: push notifications, morning brief, My week (migration 0011)
+- Push: `public/sw.js` + Settings → Notifications. Needs `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (and optionally `PUSH_CONTACT`, a mailto: or https URL) in Vercel, then a redeploy. On iPhone, push only works once FinLens is added to the home screen (iOS 16.4+).
+- Signal alerts: when a direct signal is stored for a ticker, people following it get a notification (max 5/day/person, opt-out in Settings).
+- Morning brief: `/api/cron/morning-brief` runs hourly via pg_cron and sends at 8 a.m. local time on weekdays (time zone captured when notifications are turned on), once per day. The same brief is the "Today on your stocks" card on Home (it replaces the old Market Brief block).
+- My week: `/week`, swipeable cards — a 7-day recap of signals on followed stocks, then one card per upcoming day with followed stocks first. On phones it replaces Agenda in the bottom bar.

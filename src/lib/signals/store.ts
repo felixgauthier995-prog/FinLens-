@@ -5,6 +5,8 @@ import { COMPANY_NAMES } from "@/lib/data/assets";
 import type { RawNewsArticle } from "@/lib/providers/news/types";
 import { filterSignals, type ProposedSignal } from "@/lib/signals/filter";
 import { verifySignals } from "@/lib/signals/verify";
+import { notifySignalWatchers } from "@/lib/push/send";
+import { slugifyArticle } from "@/lib/data/news";
 
 export const SIGNAL_INDEX_TICKER = "SPY";
 
@@ -85,6 +87,16 @@ export async function storeSignals(
       .from("article_signals")
       .upsert(rows, { onConflict: "article_id,ticker", ignoreDuplicates: true });
     if (error) throw error;
+
+    // Tell followers of these stocks. A failure here never loses the signals.
+    try {
+      await notifySignalWatchers(
+        { title: article.title, slug: slugifyArticle(article.title, articleId) },
+        kept
+      );
+    } catch (err) {
+      console.error("[signals] notification failed:", err instanceof Error ? err.message.slice(0, 120) : err);
+    }
     return rows.length;
   } catch (err) {
     console.error(

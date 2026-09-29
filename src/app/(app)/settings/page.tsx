@@ -1,8 +1,9 @@
 import { AccountPanel } from "@/components/features/settings/AccountPanel";
 import { requireAppAccess } from "@/lib/account";
+import { NotificationsPanel } from "@/components/features/settings/NotificationsPanel";
 
 export default async function SettingsPage() {
-  const { user, subscription } = await requireAppAccess();
+  const { user, subscription, profile } = await requireAppAccess();
   return (
     <div className="mx-auto max-w-3xl p-6">
       <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
@@ -16,10 +17,10 @@ export default async function SettingsPage() {
           cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
         }}
       />
-      <p className="text-sm text-ink-600">
-        Watchlists and in-app event reminders are saved to your account. Email
-        and push alerts are not enabled yet.
-      </p>
+      <NotificationsPanel
+        notifySignals={profile?.notifySignals ?? true}
+        notifyMorning={profile?.notifyMorning ?? true}
+      />
     </div>
   );
 }

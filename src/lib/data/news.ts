@@ -24,7 +24,7 @@ interface SupabaseArticleRow {
   plain_explanation: string | null;
 }
 
-function slugifyArticle(title: string, id: number): string {
+export function slugifyArticle(title: string, id: number): string {
   const base = title
     .toLowerCase()
     .trim()

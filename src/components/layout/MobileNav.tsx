@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/i18n/client";
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
@@ -12,6 +13,7 @@ function isActive(pathname: string, href: string) {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { m } = useI18n();
 
   return (
     <nav
@@ -34,7 +36,7 @@ export function MobileNav() {
               strokeWidth={active ? 2.25 : 2}
             />
             <span className={active ? "text-ink-950" : "text-ink-400"}>
-              {item.label === "Ask FinLens" ? "Ask" : item.label === "My week" ? "Week" : item.label}
+              {item.key === "ask" ? m.nav.askShort : item.key === "week" ? m.nav.weekShort : m.nav[item.key]}
             </span>
           </Link>
         );

@@ -6,6 +6,8 @@ import { getEventsSorted } from "@/lib/data/events";
 import { buildBrief, localTime } from "@/lib/brief";
 import { sendToUser } from "@/lib/push/send";
 import type { UserPreferences } from "@/lib/personalization";
+import { isLocale } from "@/i18n/config";
+import { localizeArticle } from "@/i18n/content";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
 
   const { data: profiles } = await supabaseAdminClient
     .from("profiles")
-    .select("user_id, timezone, last_morning_push, experience, risk, sectors")
+    .select("user_id, timezone, last_morning_push, experience, risk, sectors, locale")
     .in("user_id", userIds)
     .eq("notify_morning", true)
     .not("timezone", "is", null);
@@ -57,7 +59,8 @@ export async function GET(request: Request) {
       sectors: p.sectors ?? [],
       tickers: (watch.data ?? []).filter((w) => w.user_id === p.user_id).map((w) => w.ticker as string),
     };
-    const brief = buildBrief(prefs, articles, events, now.getTime());
+    const locale = isLocale(p.locale) ? p.locale : "en";
+    const brief = buildBrief(prefs, articles.map((a) => localizeArticle(a, locale)), events, now.getTime(), locale);
     sent += await sendToUser(p.user_id, { title: brief.pushTitle, body: brief.pushBody, url: "/", tag: "morning-brief" });
     // Mark the day as done either way, so a failing device isn't retried every hour.
     await supabaseAdminClient.from("profiles").update({ last_morning_push: p.localDate }).eq("user_id", p.user_id);

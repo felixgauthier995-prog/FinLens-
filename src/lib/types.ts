@@ -73,6 +73,17 @@ export interface NewsArticle {
   whatToWatch: string[];
   /** No-jargon version for beginners. Absent on older/editorial articles. */
   plainExplanation?: string;
+  /** French version of the reader-facing text (AI translation). */
+  fr?: {
+    title: string;
+    whatHappened: string;
+    whyItMatters: string;
+    marketImpact: string;
+    whatToWatch: string[];
+    plainExplanation: string;
+  };
+  /** Set by localizeArticle when the text shown is a translation. */
+  translated?: boolean;
   relatedEventSlug?: string;
   /** Set when AI analysis flagged this as a major company-specific event
    * (product launch, contract, partnership, M&A, earnings, regulatory). */
@@ -100,6 +111,8 @@ export interface ArticleSignal {
   horizon: SignalHorizon;
   linkLevel: SignalLinkLevel;
   rationale: string;
+  /** French version of the rationale, when available. */
+  rationaleFr?: string;
   /** Sentence from the source article that supports the signal. */
   evidenceQuote: string;
   verified: boolean;

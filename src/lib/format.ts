@@ -1,6 +1,8 @@
-export function formatPrice(value: number | null, currency = "USD"): string {
-  if (value == null || !Number.isFinite(value)) return "Unavailable";
-  return new Intl.NumberFormat("en-US", {
+import { intlLocale, type Locale } from "@/i18n/config";
+
+export function formatPrice(value: number | null, currency = "USD", locale: Locale = "en"): string {
+  if (value == null || !Number.isFinite(value)) return locale === "fr" ? "Indisponible" : "Unavailable";
+  return new Intl.NumberFormat(locale === "fr" ? "fr-CA" : "en-US", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
@@ -19,55 +21,51 @@ export function formatSigned(value: number): string {
   return `${sign}${value.toFixed(2)}`;
 }
 
-export function formatRelativeTime(iso: string): string {
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.round(diffMs / 60000);
-
+export function formatRelativeTime(iso: string, locale: Locale = "en"): string {
+  const diffMin = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  const diffHours = Math.round(diffMin / 60);
+  const diffDays = Math.round(diffHours / 24);
+  if (locale === "fr") {
+    if (diffMin < 1) return "À l'instant";
+    if (diffMin < 60) return `Il y a ${diffMin} min`;
+    if (diffHours < 24) return `Il y a ${diffHours} h`;
+    return `Il y a ${diffDays} j`;
+  }
   if (diffMin < 1) return "Just now";
   if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHours = Math.round(diffMin / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.round(diffHours / 24);
   return `${diffDays}d ago`;
 }
 
-const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "long" });
-const timeFormatter = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-});
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-});
-const fullDateFormatter = new Intl.DateTimeFormat("en-US", {
-  weekday: "long",
-  month: "long",
-  day: "numeric",
-});
+function fmt(locale: Locale, options: Intl.DateTimeFormatOptions) {
+  return new Intl.DateTimeFormat(intlLocale(locale), options);
+}
 
-export function formatEventDay(iso: string): string {
+export function formatEventDay(iso: string, locale: Locale = "en"): string {
   const date = new Date(iso);
   const now = new Date();
   const diffDays = Math.round(
     (new Date(date.toDateString()).getTime() - new Date(now.toDateString()).getTime()) /
       86400000
   );
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
-  if (diffDays === -1) return "Yesterday";
-  if (diffDays > 1 && diffDays < 7) return dayFormatter.format(date);
-  return dateFormatter.format(date);
+  const words =
+    locale === "fr"
+      ? { 0: "Aujourd'hui", 1: "Demain", [-1]: "Hier" }
+      : { 0: "Today", 1: "Tomorrow", [-1]: "Yesterday" };
+  if (diffDays in words) return words[diffDays as 0 | 1 | -1];
+  if (diffDays > 1 && diffDays < 7) {
+    const day = fmt(locale, { weekday: "long" }).format(date);
+    return locale === "fr" ? day.charAt(0).toUpperCase() + day.slice(1) : day;
+  }
+  return fmt(locale, { month: "short", day: "numeric" }).format(date);
 }
 
-export function formatEventTime(iso: string): string {
-  return timeFormatter.format(new Date(iso));
+export function formatEventTime(iso: string, locale: Locale = "en"): string {
+  return fmt(locale, { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 }
 
-export function formatFullDate(iso: string): string {
-  return fullDateFormatter.format(new Date(iso));
+export function formatFullDate(iso: string, locale: Locale = "en"): string {
+  return fmt(locale, { weekday: "long", month: "long", day: "numeric" }).format(new Date(iso));
 }
 
 export function isPast(iso: string): boolean {

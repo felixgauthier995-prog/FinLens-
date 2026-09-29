@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/client";
 
 import Link from "next/link";
 import { X, Newspaper, CalendarClock } from "lucide-react";
@@ -23,6 +24,7 @@ export function WatchlistRow({
   focused?: boolean;
   onRemove: () => void;
 }) {
+  const { locale, m } = useI18n();
   return (
     <Card
       id={`asset-${asset.ticker}`}
@@ -43,14 +45,14 @@ export function WatchlistRow({
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-end">
             <p className="font-data text-[15px] font-medium text-ink-950">
-              {formatPrice(asset.price)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? "Demo quote" : asset.priceUpdatedAt ? `Last stored quote · ${asset.priceUpdatedAt}` : "No verified quote"}</span>
+              {formatPrice(asset.price, "USD", locale)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? m.news.demoQuote : asset.priceUpdatedAt ? m.news.storedQuote(asset.priceUpdatedAt) : m.news.noQuote}</span>
             </p>
             <PriceChange changePercent={asset.changePercent} size="sm" />
           </div>
           <button
             type="button"
             onClick={onRemove}
-            aria-label={`Remove ${asset.ticker} from watchlist`}
+            aria-label={m.watchlist.remove(asset.ticker)}
             className="rounded-md p-1 text-ink-300 transition-colors hover:bg-surface hover:text-ink-600"
           >
             <X className="h-4 w-4" strokeWidth={2} />
@@ -81,7 +83,7 @@ export function WatchlistRow({
           >
             <CalendarClock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-400" strokeWidth={2} />
             <span className="line-clamp-2">
-              {nextEvent.title} — {formatEventDay(nextEvent.scheduledAt)}
+              {nextEvent.title} — {formatEventDay(nextEvent.scheduledAt, locale)}
             </span>
           </Link>
         ) : (

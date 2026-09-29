@@ -1,3 +1,6 @@
+"use client";
+import { useI18n } from "@/i18n/client";
+
 import { cn } from "@/lib/cn";
 import type { WatchlistItem } from "@/lib/types";
 
@@ -8,7 +11,9 @@ const CONFIG: Record<WatchlistItem["attentionLevel"], { label: string; dot: stri
 };
 
 export function AttentionBadge({ level }: { level: WatchlistItem["attentionLevel"] }) {
-  const { label, dot, text } = CONFIG[level];
+  const { m } = useI18n();
+  const { dot, text } = CONFIG[level];
+  const label = m.watchlist.attention[level];
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-[11.5px] font-medium", text)}>
       <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />

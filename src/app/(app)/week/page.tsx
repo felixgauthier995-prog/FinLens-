@@ -2,19 +2,19 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowDownRight, ArrowUpRight, ChevronRight } from "lucide-react";
 import { getEventsSorted } from "@/lib/data/events";
-import { getArticlesSorted } from "@/lib/data/news";
+import { getArticlesForReader } from "@/lib/data/reader";
+import { getMessages, getLocale } from "@/i18n/server";
+import { intlLocale } from "@/i18n/config";
+import type { Messages } from "@/i18n/messages";
 import { getUserPreferences } from "@/lib/data/preferences";
 import { buildWeek, weekRecap } from "@/lib/week";
-import { EVENT_TYPE_LABEL } from "@/lib/data/categories";
 import type { MarketEvent } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = { title: "My week — FinLens" };
 
-const dayName = new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "UTC" });
-const dayDate = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
 
-function EventLine({ event, mine }: { event: MarketEvent; mine: boolean }) {
+function EventLine({ event, mine, m }: { event: MarketEvent; mine: boolean; m: Messages }) {
   return (
     <li>
       <Link
@@ -27,7 +27,7 @@ function EventLine({ event, mine }: { event: MarketEvent; mine: boolean }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-medium text-ink-950">{event.title}</span>
           <span className="block text-[12px] text-ink-400">
-            {EVENT_TYPE_LABEL[event.eventType]}
+            {m.eventTypes[event.eventType]}
             {event.affectedAssets.length > 0 && ` · ${event.affectedAssets.slice(0, 3).join(", ")}`}
           </span>
         </span>
@@ -38,7 +38,16 @@ function EventLine({ event, mine }: { event: MarketEvent; mine: boolean }) {
 }
 
 export default async function WeekPage() {
-  const [events, articles, prefs] = await Promise.all([getEventsSorted(), getArticlesSorted(), getUserPreferences()]);
+  const [events, articles, prefs, m, locale] = await Promise.all([
+    getEventsSorted(),
+    getArticlesForReader(),
+    getUserPreferences(),
+    getMessages(),
+    getLocale(),
+  ]);
+  const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+  const dayName = new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", timeZone: "UTC" });
+  const dayDate = new Intl.DateTimeFormat(intlLocale(locale), { month: "long", day: "numeric", timeZone: "UTC" });
   const days = buildWeek(prefs, events);
   const recap = weekRecap(prefs, articles);
   const total = days.length + 1;
@@ -49,18 +58,18 @@ export default async function WeekPage() {
   return (
     <div className="py-6 sm:py-8">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <h1 className="text-[22px] font-semibold tracking-tight text-ink-950 sm:text-2xl">My week</h1>
-        <p className="mt-1 text-[13.5px] text-ink-400">Swipe through what&apos;s coming — your stocks first.</p>
+        <h1 className="text-[22px] font-semibold tracking-tight text-ink-950 sm:text-2xl">{m.week.title}</h1>
+        <p className="mt-1 text-[13.5px] text-ink-400">{m.week.subtitle}</p>
       </div>
 
       <div
         className="mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-label="Days of the week"
+        aria-label={m.week.daysLabel}
       >
         {/* Recap card */}
-        <section className={cardClass} aria-label="Your stocks this week">
+        <section className={cardClass} aria-label={m.week.soFar}>
           <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-400">1 / {total}</p>
-          <h2 className="mt-3 font-serif text-[30px] font-semibold leading-tight text-ink-950">This week so far</h2>
+          <h2 className="mt-3 font-serif text-[30px] font-semibold leading-tight text-ink-950">{m.week.soFar}</h2>
           {recap.length > 0 ? (
             <ul className="mt-5 space-y-2">
               {recap.map((s) => {
@@ -85,47 +94,45 @@ export default async function WeekPage() {
             </ul>
           ) : (
             <p className="mt-5 text-[14px] leading-relaxed text-ink-600">
-              {prefs.tickers.length
-                ? "No new signals on your stocks in the last 7 days."
-                : "Follow some stocks to see their signals here."}
+              {prefs.tickers.length ? m.week.noSignals : m.week.followHint}
             </p>
           )}
-          <p className="mt-auto pt-6 text-[12px] text-ink-400">Swipe to see the days ahead →</p>
+          <p className="mt-auto pt-6 text-[12px] text-ink-400">{m.week.swipe}</p>
         </section>
 
         {days.map((day, i) => {
           const t = Date.parse(`${day.date}T12:00:00Z`);
           const empty = day.mine.length === 0 && day.market.length === 0;
           return (
-            <section key={day.date} className={cardClass} aria-label={dayName.format(t)}>
+            <section key={day.date} className={cardClass} aria-label={cap(dayName.format(t))}>
               <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-400">
                 {i + 2} / {total}
-                {day.isToday && <span className="ml-2 rounded-full bg-ink-950 px-2 py-0.5 text-white">Today</span>}
+                {day.isToday && <span className="ml-2 rounded-full bg-ink-950 px-2 py-0.5 text-white">{m.week.today}</span>}
               </p>
-              <h2 className="mt-3 font-serif text-[30px] font-semibold leading-tight text-ink-950">{dayName.format(t)}</h2>
+              <h2 className="mt-3 font-serif text-[30px] font-semibold leading-tight text-ink-950">{cap(dayName.format(t))}</h2>
               <p className="text-[14px] text-ink-400">{dayDate.format(t)}</p>
 
               {day.mine.length > 0 && (
                 <>
-                  <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-accent-ink">Your stocks</p>
+                  <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-accent-ink">{m.week.yourStocks}</p>
                   <ul className="mt-2 space-y-2">
                     {day.mine.map((e) => (
-                      <EventLine key={e.id} event={e} mine />
+                      <EventLine key={e.id} event={e} mine m={m} />
                     ))}
                   </ul>
                 </>
               )}
               {day.market.length > 0 && (
                 <>
-                  <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-ink-400">Market</p>
+                  <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-ink-400">{m.week.market}</p>
                   <ul className="mt-2 space-y-2">
                     {day.market.map((e) => (
-                      <EventLine key={e.id} event={e} mine={false} />
+                      <EventLine key={e.id} event={e} mine={false} m={m} />
                     ))}
                   </ul>
                 </>
               )}
-              {empty && <p className="mt-5 text-[14px] text-ink-600">Nothing scheduled.</p>}
+              {empty && <p className="mt-5 text-[14px] text-ink-600">{m.week.nothing}</p>}
             </section>
           );
         })}

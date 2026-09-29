@@ -4,52 +4,38 @@ import type { Metadata } from "next";
 import { ArrowUpRight, BellRing, Quote, Sparkles } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { getAccount } from "@/lib/account";
+import { getMessages } from "@/i18n/server";
+import { LanguageSwitch } from "@/components/features/settings/LanguageSwitch";
 
 export const metadata: Metadata = {
   title: "FinLens — What moves your stocks, explained",
 };
 
-const FEATURES = [
-  {
-    icon: ArrowUpRight,
-    title: "Who could be affected",
-    text: "Each story shows which companies it's good or bad news for, and why — with the sentence from the source that backs it up.",
-  },
-  {
-    icon: Quote,
-    title: "No invented links",
-    text: "Every signal must quote the article and pass a second review. Our hit rate is published, right or wrong.",
-  },
-  {
-    icon: BellRing,
-    title: "Built around your stocks",
-    text: "Pick the companies you follow and FinLens puts their earnings, news and catalysts first.",
-  },
-  {
-    icon: Sparkles,
-    title: "Ask FinLens",
-    text: "Ask a question in plain words and get an answer grounded in the latest coverage.",
-  },
-];
+const FEATURE_ICONS = [ArrowUpRight, Quote, BellRing, Sparkles];
 
 export default async function WelcomePage() {
   if (await getAccount()) redirect("/");
+  const m = await getMessages();
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-6 py-10">
-      <Logo />
+      <div className="flex items-center justify-between">
+        <Logo />
+        <LanguageSwitch compact />
+      </div>
       <div className="mt-12">
         <h1 className="font-serif text-[34px] font-semibold leading-[1.1] tracking-tight text-ink-950">
-          What moves your stocks, explained.
+          {m.welcome.title}
         </h1>
         <p className="mt-4 text-[16px] leading-relaxed text-ink-600">
-          FinLens reads the financial news for you and tells you which companies it could affect —
-          up or down, and why.
+          {m.welcome.intro}
         </p>
       </div>
 
       <ul className="mt-10 space-y-5">
-        {FEATURES.map(({ icon: Icon, title, text }) => (
+        {m.welcome.features.map(({ title, text }, i) => {
+          const Icon = FEATURE_ICONS[i] ?? Sparkles;
+          return (
           <li key={title} className="flex gap-3.5">
             <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">
               <Icon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
@@ -59,7 +45,8 @@ export default async function WelcomePage() {
               <p className="mt-0.5 text-[13.5px] leading-relaxed text-ink-600">{text}</p>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <div className="mt-auto pt-12">
@@ -67,16 +54,20 @@ export default async function WelcomePage() {
           href="/login?mode=signup"
           className="flex h-12 w-full items-center justify-center rounded-xl bg-ink-950 text-[15px] font-semibold text-white transition-colors hover:bg-ink-800"
         >
-          Start your 7-day free trial
+          {m.welcome.start}
         </Link>
         <Link
           href="/login"
           className="mt-3 flex h-11 w-full items-center justify-center text-[14px] font-medium text-ink-600 hover:text-ink-950"
         >
-          I already have an account
+          {m.welcome.haveAccount}
         </Link>
         <p className="mt-4 text-center text-[11.5px] leading-relaxed text-ink-400">
-          Information and analysis, not investment advice.
+          {m.common.notAdvice}
+        </p>
+        <p className="mt-2 flex justify-center gap-4 text-[11.5px] text-ink-400">
+          <Link href="/legal/terms" className="hover:text-ink-950">{m.common.terms}</Link>
+          <Link href="/legal/privacy" className="hover:text-ink-950">{m.common.privacy}</Link>
         </p>
       </div>
     </main>

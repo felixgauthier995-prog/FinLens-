@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { NewsArticle } from "@/lib/types";
 import { CardLink } from "@/components/ui/Card";
@@ -5,7 +7,7 @@ import { CategoryTag, AssetTag } from "@/components/ui/Tag";
 import { ImpactScore } from "@/components/ui/ImpactScore";
 import { formatRelativeTime } from "@/lib/format";
 import { SignalChips } from "@/components/features/news/SignalList";
-import { CATEGORY_LABEL } from "@/lib/data/categories";
+import { useI18n } from "@/i18n/client";
 import {
   NO_PREFERENCES,
   relevanceReason,
@@ -20,6 +22,7 @@ export function NewsCard({
   article: NewsArticle;
   prefs?: UserPreferences;
 }) {
+  const { locale, m } = useI18n();
   const reason = relevanceReason(article, prefs);
   const signals = article.signals ? signalsForUser(article.signals, prefs) : [];
   const text =
@@ -33,7 +36,7 @@ export function NewsCard({
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-ink-400">
           {reason && (
             <span className="rounded-full bg-accent-soft px-2 py-0.5 font-semibold text-accent-ink">
-              {reason.kind === "stock" ? `Your stock · ${reason.ticker}` : `Your interest · ${CATEGORY_LABEL[reason.category]}`}
+              {reason.kind === "stock" ? m.news.yourStock(reason.ticker) : m.news.yourInterest(m.categories[reason.category])}
             </span>
           )}
           <CategoryTag category={article.category} />
@@ -41,7 +44,7 @@ export function NewsCard({
           <span>{article.source}</span>
           <span aria-hidden="true">·</span>
           <time title={article.publishedAt} dateTime={article.publishedAt}>
-            {formatRelativeTime(article.publishedAt)}
+            {formatRelativeTime(article.publishedAt, locale)}
           </time>
         </div>
 

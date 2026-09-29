@@ -6,6 +6,7 @@ import { Settings } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/i18n/client";
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
@@ -14,6 +15,7 @@ function isActive(pathname: string, href: string) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { m } = useI18n();
 
   return (
     <aside className="hidden md:flex md:w-60 md:shrink-0 md:flex-col md:border-r md:border-border md:bg-surface/60">
@@ -40,7 +42,7 @@ export function Sidebar() {
               )}
             >
               <Icon className="h-[17px] w-[17px]" strokeWidth={2} />
-              {item.label}
+              {m.nav[item.key]}
             </Link>
           );
         })}
@@ -57,7 +59,7 @@ export function Sidebar() {
           )}
         >
           <Settings className="h-[17px] w-[17px]" strokeWidth={2} />
-          Settings
+          {m.settings.title}
         </Link>
       </div>
     </aside>

@@ -1,6 +1,9 @@
+"use client";
+
 import { cn } from "@/lib/cn";
 import type { ImpactScore as ImpactScoreType } from "@/lib/types";
-import { IMPACT_LABEL, IMPACT_TONE } from "@/lib/impact";
+import { IMPACT_TONE } from "@/lib/impact";
+import { useI18n } from "@/i18n/client";
 
 const SEGMENTS = 5;
 
@@ -18,6 +21,8 @@ export function ImpactScore({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
+  const { locale, m } = useI18n();
+  const label = m.impact[score.level];
   const tone = IMPACT_TONE[score.level];
   const filled = Math.max(1, Math.round((score.value / 10) * SEGMENTS));
 
@@ -39,7 +44,7 @@ export function ImpactScore({
           ))}
         </div>
         <span className={cn("text-[11px] font-medium", tone.text)}>
-          {IMPACT_LABEL[score.level]}
+          {label}
         </span>
       </div>
     );
@@ -52,7 +57,7 @@ export function ImpactScore({
         className
       )}
       role="img"
-      aria-label={`Impact score ${score.value.toFixed(1)} out of 10, ${IMPACT_LABEL[score.level]}`}
+      aria-label={`${score.value.toFixed(1)}/10 · ${label}`}
     >
       <span className="font-data text-2xl font-semibold text-ink-950 leading-none">
         {score.value.toFixed(1)}
@@ -66,7 +71,7 @@ export function ImpactScore({
             tone.bg
           )}
         >
-          {IMPACT_LABEL[score.level]} impact
+          {locale === "fr" ? `Impact ${label.toLowerCase()}` : `${label} impact`}
         </span>
         <div className="flex items-center gap-0.5" aria-hidden="true">
           {Array.from({ length: SEGMENTS }).map((_, i) => (

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/client";
 import { useEffect, useState } from "react";
 import { supabaseBrowserClient as db } from "@/lib/supabase/client";
 export function AddAlertButton({
@@ -13,6 +14,7 @@ export function AddAlertButton({
   compact?: boolean;
   className?: string;
 }) {
+  const { m } = useI18n();
   const [active, setActive] = useState(false),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
@@ -48,7 +50,7 @@ export function AddAlertButton({
     e.preventDefault();
     e.stopPropagation();
     if (!db) {
-      setMessage("Account service unavailable");
+      setMessage(m.agenda.accountUnavailable);
       return;
     }
     setBusy(true);
@@ -57,7 +59,7 @@ export function AddAlertButton({
         data: { user },
       } = await db.auth.getUser();
       if (!user) {
-        setMessage("Sign in in Settings to save a reminder.");
+        setMessage(m.agenda.signInToRemind);
         return;
       }
       const result = active
@@ -81,11 +83,11 @@ export function AddAlertButton({
       setActive(!active);
       setMessage(
         active
-          ? "Reminder removed"
-          : "Saved. Shown in Notifications when due; no email is sent.",
+          ? m.agenda.reminderRemoved
+          : m.agenda.reminderSavedText,
       );
     } catch {
-      setMessage("Could not save reminder. Try again.");
+      setMessage(m.agenda.reminderError);
     } finally {
       setBusy(false);
     }
@@ -98,7 +100,7 @@ export function AddAlertButton({
         onClick={toggle}
         className="rounded border border-border px-3 py-2 text-xs"
       >
-        {busy ? "Saving…" : active ? "Reminder saved" : "Add reminder"}
+        {busy ? m.common.saving : active ? m.agenda.reminderSaved : m.agenda.addReminder}
       </button>
       {message && (
         <span role="status" className="block mt-1 text-xs">

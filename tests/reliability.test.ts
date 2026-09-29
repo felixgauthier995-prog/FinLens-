@@ -13,6 +13,7 @@ const valid = {
   whatToWatch: ["Next report"],
   affectedAssets: ["SPY"],
   plainExplanation: "Something happened.",
+  fr: { title: "t", whatHappened: "w", whyItMatters: "y", marketImpact: "m", whatToWatch: [], plainExplanation: "p" },
   signals: [],
 };
 test("rejects invented tickers and invalid impact scores", () => {

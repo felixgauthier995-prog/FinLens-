@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/supabase/session";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { getStripe, priceIdFor, siteUrl, TRIAL_DAYS, type Plan } from "@/lib/billing/stripe";
+import { getLocale } from "@/i18n/server";
 
 /** Starts a Stripe Checkout for the signed-in user. Returns { url }. */
 export async function POST(request: Request) {
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     const base = siteUrl(request);
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
+      locale: (await getLocale()) === "fr" ? "fr-CA" : "en",
       customer: customerId,
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],

@@ -74,3 +74,9 @@ The app is now private: every page in `(app)` requires (1) a signed-in user, (2)
 - Signal alerts: when a direct signal is stored for a ticker, people following it get a notification (max 5/day/person, opt-out in Settings).
 - Morning brief: `/api/cron/morning-brief` runs hourly via pg_cron and sends at 8 a.m. local time on weekdays (time zone captured when notifications are turned on), once per day. The same brief is the "Today on your stocks" card on Home (it replaces the old Market Brief block).
 - My week: `/week`, swipeable cards — a 7-day recap of signals on followed stocks, then one card per upcoming day with followed stocks first. On phones it replaces Agenda in the bottom bar.
+
+## Bilingual FR/EN and legal pages (migration 0012)
+- Language: cookie `finlens_locale` (switch in Settings, Welcome, Login and legal pages), otherwise the browser's language; French if it's any `fr-*`. Stored in `profiles.locale` for notifications. All UI text lives in `src/i18n/en.ts` / `fr.ts`; the type system forces both files to have the same keys.
+- Content: each new article's AI analysis also returns a French version (`articles.fr`, `article_signals.rationale_fr`) in the same call. Articles analyzed before this change are shown in English. Quotes from sources stay in their original language. Stripe Checkout and the billing portal open in `fr-CA` for French users.
+- Legal: `/legal/terms` and `/legal/privacy` in both languages (`src/legal/documents.ts`). Company name, address, privacy officer and governing law are placeholders in `src/legal/company.ts` — fill them in and have a lawyer review both documents before charging real customers.
+- Settings → Delete my account: cancels the Stripe subscription, deletes the Stripe customer, then deletes the user (all FinLens data cascades).

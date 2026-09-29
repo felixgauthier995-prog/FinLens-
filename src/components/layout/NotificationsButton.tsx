@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabaseBrowserClient as db } from "@/lib/supabase/client";
@@ -9,6 +10,7 @@ type Reminder = {
   read_at: string | null;
 };
 export function NotificationsButton() {
+  const { m } = useI18n();
   const [open, setOpen] = useState(false),
     [items, setItems] = useState<Reminder[]>([]),
     [message, setMessage] = useState("");
@@ -22,7 +24,7 @@ export function NotificationsButton() {
       if (!user) {
         if (alive) {
           setItems([]);
-          setMessage("Sign in to see saved reminders.");
+          setMessage(m.reminders.signIn);
         }
         return;
       }
@@ -35,7 +37,7 @@ export function NotificationsButton() {
         .limit(30);
       if (alive) {
         setItems(data ?? []);
-        setMessage(error ? "Reminders unavailable." : "No due reminders.");
+        setMessage(error ? m.reminders.unavailable : m.reminders.none);
       }
     }
     void load();
@@ -48,12 +50,13 @@ export function NotificationsButton() {
       clearInterval(id);
       sub?.data.subscription.unsubscribe();
     };
-  }, []);
+    // m is a constant per language; it only changes when the language does.
+  }, [m]);
   return (
     <div className="relative">
       <button
         aria-expanded={open}
-        aria-label="Notifications"
+        aria-label={m.reminders.title}
         onClick={() => setOpen(!open)}
         className="rounded border border-border px-3 py-2 text-sm"
       >
@@ -61,7 +64,7 @@ export function NotificationsButton() {
       </button>
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-72 max-h-80 overflow-auto rounded-xl border bg-background p-4 shadow-lg">
-          <h2 className="font-semibold">In-app reminders</h2>
+          <h2 className="font-semibold">{m.reminders.heading}</h2>
           <p className="my-2 text-xs">
             Checked every minute while FinLens is open. No email or push
             delivery.
@@ -79,7 +82,7 @@ export function NotificationsButton() {
               </Link>
             ))
           ) : (
-            <p className="text-sm">{message || "No reminders available."}</p>
+            <p className="text-sm">{message || m.reminders.noneAvailable}</p>
           )}
         </div>
       )}

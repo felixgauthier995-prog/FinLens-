@@ -1,7 +1,9 @@
+"use client";
+
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 import type { Category } from "@/lib/types";
-import { CATEGORY_LABEL } from "@/lib/data/categories";
+import { useI18n } from "@/i18n/client";
 
 export function Tag({ className, ...props }: HTMLAttributes<HTMLSpanElement>) {
   return (
@@ -22,7 +24,8 @@ export function CategoryTag({
   category: Category;
   className?: string;
 }) {
-  return <Tag className={className}>{CATEGORY_LABEL[category]}</Tag>;
+  const { m } = useI18n();
+  return <Tag className={className}>{m.categories[category]}</Tag>;
 }
 
 export function AssetTag({ ticker, className }: { ticker: string; className?: string }) {

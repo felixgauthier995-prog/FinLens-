@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -78,6 +79,7 @@ export function CommandSearch({
   articles: NewsArticle[];
   events: MarketEvent[];
 }) {
+  const { m } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -139,11 +141,11 @@ export function CommandSearch({
       <button
         type="button"
         onClick={openSearch}
-        aria-label="Search"
+        aria-label={m.search.button}
         className="flex h-9 w-9 items-center justify-center gap-2 rounded-md border border-border bg-surface px-0 text-[13px] text-ink-400 transition-colors hover:border-border-strong sm:w-64 sm:justify-start sm:px-3"
       >
         <Search className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-        <span className="hidden flex-1 text-left sm:inline">Search companies, news, events…</span>
+        <span className="hidden flex-1 text-left sm:inline">{m.search.placeholder}</span>
         <kbd className="hidden rounded border border-border bg-background px-1.5 py-0.5 font-data text-[10px] text-ink-400 sm:inline-block">
           ⌘K
         </kbd>
@@ -154,7 +156,7 @@ export function CommandSearch({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Search FinLens"
+            aria-label={m.search.dialog}
             className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-background shadow-xl"
           >
             <div className="flex items-center gap-2 border-b border-border px-4">
@@ -163,13 +165,13 @@ export function CommandSearch({
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search companies, news, events…"
+                placeholder={m.search.placeholder}
                 className="h-12 w-full bg-transparent text-sm text-ink-950 placeholder:text-ink-400 outline-none"
               />
               <button
                 type="button"
                 onClick={closeSearch}
-                aria-label="Close search"
+                aria-label={m.search.close}
                 className="shrink-0 rounded-md p-1 text-ink-400 hover:bg-surface hover:text-ink-950"
               >
                 <X className="h-4 w-4" />
@@ -190,7 +192,7 @@ export function CommandSearch({
               {(Object.keys(grouped) as Array<keyof typeof GROUP_ICON>).map((group) => (
                 <div key={group} className="mb-1">
                   <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-                    {group}
+                    {group === "Assets" ? m.search.assets : group === "News" ? m.search.news : m.search.agenda}
                   </p>
                   {grouped[group].map((r) => {
                     const Icon = GROUP_ICON[r.group];

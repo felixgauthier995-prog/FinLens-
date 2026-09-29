@@ -22,6 +22,7 @@ interface SupabaseArticleRow {
   market_impact: string | null;
   what_to_watch: string[] | null;
   plain_explanation: string | null;
+  fr: NewsArticle["fr"] | null;
 }
 
 export function slugifyArticle(title: string, id: number): string {
@@ -52,6 +53,7 @@ function mapSupabaseArticle(row: SupabaseArticleRow): NewsArticle {
     marketImpact: row.market_impact ?? "Analysis for this story is still in progress.",
     whatToWatch: row.what_to_watch ?? [],
     ...(row.plain_explanation ? { plainExplanation: row.plain_explanation } : {}),
+    ...(row.fr ? { fr: row.fr } : {}),
   };
 }
 
@@ -386,7 +388,7 @@ async function automaticRecords(): Promise<NewsArticle[]> {
     const { data, error } = await supabaseServerClient
       .from("articles")
       .select(
-        "id, title, summary, url, source_name, published_at, tickers, category, impact_score, impact_direction, what_happened, why_it_matters, market_impact, what_to_watch, plain_explanation"
+        "id, title, summary, url, source_name, published_at, tickers, category, impact_score, impact_direction, what_happened, why_it_matters, market_impact, what_to_watch, plain_explanation, fr"
       )
       .order("published_at", { ascending: false })
       .limit(100);

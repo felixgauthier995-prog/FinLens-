@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowLeft, CalendarClock, ExternalLink } from "lucide-react";
-import { getArticle } from "@/lib/data/news";
+import { getArticleForReader as getArticle } from "@/lib/data/reader";
+import { getMessages, getLocale } from "@/i18n/server";
 import { getEvent } from "@/lib/data/events";
 import { getAssets } from "@/lib/data/assets";
 import { CategoryTag } from "@/components/ui/Tag";
@@ -45,7 +46,7 @@ export default async function NewsDetailPage({
 
   const assets = await getAssets(article.affectedAssets);
   const relatedEvent = article.relatedEventSlug ? await getEvent(article.relatedEventSlug) : undefined;
-  const prefs = await getUserPreferences();
+  const [prefs, m, locale] = await Promise.all([getUserPreferences(), getMessages(), getLocale()]);
   const visibleSignals = article.signals ? signalsForUser(article.signals, prefs) : [];
   const hiddenIndirect = (article.signals?.length ?? 0) - visibleSignals.length;
   const trackRecord = visibleSignals.length ? await getSignalTrackRecord() : undefined;
@@ -59,14 +60,14 @@ export default async function NewsDetailPage({
         className="mb-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-400 hover:text-ink-950"
       >
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
-        Back to News
+        {m.news.backToNews}
       </Link>
 
       <div className="flex items-center gap-2 text-[12px] text-ink-400">
         <CategoryTag category={article.category} />
         <span aria-hidden="true">·</span>
-        <time dateTime={article.publishedAt} title={formatFullDate(article.publishedAt)}>
-          {formatRelativeTime(article.publishedAt)}
+        <time dateTime={article.publishedAt} title={formatFullDate(article.publishedAt, locale)}>
+          {formatRelativeTime(article.publishedAt, locale)}
         </time>
       </div>
 
@@ -74,12 +75,13 @@ export default async function NewsDetailPage({
         {article.title}
       </h1>
       <p className="mt-3 text-[15.5px] leading-relaxed text-ink-600">{article.summary}</p>
+      {article.translated && <p className="mt-2 text-[12px] italic text-ink-400">{m.news.translatedNote}</p>}
 
       {showPlain && (
         <div className="mt-5 flex gap-3 rounded-xl bg-accent-soft p-4">
           <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" strokeWidth={2} aria-hidden="true" />
           <div>
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-accent-ink">In plain words</p>
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-accent-ink">{m.news.plainWords}</p>
             <p className="mt-1 text-[14.5px] leading-relaxed text-ink-800">{article.plainExplanation}</p>
           </div>
         </div>
@@ -97,41 +99,40 @@ export default async function NewsDetailPage({
         >
           <CalendarClock className="h-4 w-4 shrink-0 text-ink-400" strokeWidth={2} />
           <span className="text-[13px] text-ink-600">
-            This follows a scheduled event: <span className="font-medium text-ink-950">{relatedEvent.title}</span>
+            {m.news.followsEvent} <span className="font-medium text-ink-950">{relatedEvent.title}</span>
           </span>
         </Link>
       )}
 
       <div className="mt-2">
-        <ArticleSection eyebrow="Facts" title="What happened">
+        <ArticleSection eyebrow={m.news.facts} title={m.news.whatHappened}>
           <p>{article.whatHappened}</p>
         </ArticleSection>
 
-        <ArticleSection eyebrow="Analysis" title="Why it matters">
+        <ArticleSection eyebrow={m.news.analysis} title={m.news.whyItMatters}>
           <p>{article.whyItMatters}</p>
         </ArticleSection>
 
         {visibleSignals.length > 0 && (
-          <ArticleSection eyebrow="Signals" title="Who could be affected">
+          <ArticleSection eyebrow={m.news.signalsEyebrow} title={m.news.whoAffected}>
             <SignalList signals={visibleSignals} trackRecord={trackRecord} />
             {hiddenIndirect > 0 && !showsIndirectSignals(prefs) && (
               <p className="mt-2 text-[12px] text-ink-400">
-                {hiddenIndirect} lower-confidence indirect lead{hiddenIndirect === 1 ? "" : "s"} hidden based on
-                your profile.
+                {m.news.hiddenLeads(hiddenIndirect)}
               </p>
             )}
           </ArticleSection>
         )}
 
-        <ArticleSection eyebrow="Analysis" title="Market impact">
+        <ArticleSection eyebrow={m.news.analysis} title={m.news.marketImpact}>
           <p>{article.marketImpact}</p>
           <p className="mt-3 text-[12.5px] italic text-ink-400">
-            This is analysis, not a guarantee — markets can move in unexpected ways.
+            {m.news.analysisNotGuarantee}
           </p>
         </ArticleSection>
 
         {article.priceReaction && article.priceReaction.length > 0 && (
-          <ArticleSection eyebrow="Market data" title="Stock reaction since announcement">
+          <ArticleSection eyebrow={m.news.marketData} title={m.news.reaction}>
             <div className="space-y-3">
               {article.priceReaction.map((reaction) => (
                 <div
@@ -143,17 +144,17 @@ export default async function NewsDetailPage({
                       {reaction.ticker}
                     </p>
                     <p className="text-[11px] text-ink-400">
-                      Since {formatFullDate(reaction.capturedAt)}
+                      {m.news.since(formatFullDate(reaction.capturedAt, locale))}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
                     {reaction.currentDataStatus === "unavailable" ||
                     reaction.changeSincePercent === null ? (
-                      <span className="text-[13px] text-ink-400">No verified quote</span>
+                      <span className="text-[13px] text-ink-400">{m.news.noQuote}</span>
                     ) : (
                       <PriceChange changePercent={reaction.changeSincePercent} />
                     )}
-                    <span className="text-[11px] text-ink-400">vs {reaction.indexTicker}</span>
+                    <span className="text-[11px] text-ink-400">{m.news.vs} {reaction.indexTicker}</span>
                     {reaction.indexChangeSincePercent === null ? (
                       <span className="text-[13px] text-ink-400">—</span>
                     ) : (
@@ -164,15 +165,14 @@ export default async function NewsDetailPage({
               ))}
             </div>
             <p className="mt-3 text-[12.5px] italic text-ink-400">
-              This reflects price movement since publication compared to the S&amp;P 500 over the
-              same period — a timing correlation, not a confirmed cause-and-effect reaction.
+              {m.news.reactionNote}
             </p>
           </ArticleSection>
         )}
 
         <section className="border-t border-border py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Data</p>
-          <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">Assets affected</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">{m.news.data}</p>
+          <h2 className="mt-1.5 text-[16px] font-semibold text-ink-950">{m.news.assetsAffected}</h2>
           <div className="mt-3 divide-y divide-border rounded-lg border border-border">
             {assets.map((asset) => (
               <Link
@@ -188,7 +188,7 @@ export default async function NewsDetailPage({
                 </div>
                 <div className="flex flex-col items-end">
                   <p className="font-data text-[13.5px] font-medium text-ink-950">
-                    {formatPrice(asset.price)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? "Demo quote" : asset.priceUpdatedAt ? `Last stored quote · ${asset.priceUpdatedAt}` : "No verified quote"}</span>
+                    {formatPrice(asset.price, "USD", locale)}<span className="block text-[10px] font-normal text-ink-400">{asset.dataStatus === "demo" ? m.news.demoQuote : asset.priceUpdatedAt ? m.news.storedQuote(asset.priceUpdatedAt) : m.news.noQuote}</span>
                   </p>
                   <PriceChange changePercent={asset.changePercent} size="sm" />
                 </div>
@@ -197,7 +197,7 @@ export default async function NewsDetailPage({
           </div>
         </section>
 
-        <ArticleSection eyebrow="Outlook" title="What to watch next">
+        <ArticleSection eyebrow={m.news.outlook} title={m.news.watchNext}>
           <ul className="space-y-2.5">
             {article.whatToWatch.map((item, i) => (
               <li key={i} className="flex gap-2.5">
@@ -210,7 +210,7 @@ export default async function NewsDetailPage({
 
         <section className="border-t border-border py-6">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-            Sources
+            {m.news.sources}
           </p>
           <ul className="mt-2.5 space-y-1.5">
             <li>

@@ -1,5 +1,7 @@
 import type { MarketEvent, NewsArticle } from "@/lib/types";
 import { rankForUser, type UserPreferences } from "@/lib/personalization";
+import { messages } from "@/i18n/messages";
+import type { Locale } from "@/i18n/config";
 
 export interface BriefSignal {
   ticker: string;
@@ -24,8 +26,10 @@ export function buildBrief(
   prefs: UserPreferences,
   articles: NewsArticle[],
   events: MarketEvent[],
-  now = Date.now()
+  now = Date.now(),
+  locale: Locale = "en"
 ): Brief {
+  const t = messages[locale].push;
   const mine = new Set(prefs.tickers);
   const recent = articles.filter((a) => now - Date.parse(a.publishedAt) < DAY);
 
@@ -51,13 +55,11 @@ export function buildBrief(
 
   const parts: string[] = [];
   if (signals.length) parts.push(signals.map((s) => `${s.ticker} ${s.direction === "positive" ? "↑" : "↓"}`).join(" · "));
-  if (myEvents.length) parts.push(`Today: ${myEvents.slice(0, 2).map((e) => e.title).join(", ")}`);
+  if (myEvents.length) parts.push(`${t.todayPrefix} ${myEvents.slice(0, 2).map((e) => e.title).join(", ")}`);
   if (!parts.length && topStory) parts.push(topStory.title);
 
-  const pushTitle = signals.length
-    ? `Good morning — ${signals.length} signal${signals.length === 1 ? "" : "s"} on your stocks`
-    : "Good morning — your FinLens brief";
-  const pushBody = (parts.join(" — ") || "A quiet start for your stocks. Tap to see today's market.").slice(0, 180);
+  const pushTitle = signals.length ? t.morningSignals(signals.length) : t.morningDefault;
+  const pushBody = (parts.join(" — ") || t.quiet).slice(0, 180);
 
   return { signals, events: eventsOut, topStory, pushTitle, pushBody };
 }

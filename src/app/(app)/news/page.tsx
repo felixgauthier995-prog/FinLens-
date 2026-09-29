@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { CategoryChips } from "@/components/features/shared/CategoryChips";
 import { NewsCard } from "@/components/features/news/NewsCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getArticlesSorted } from "@/lib/data/news";
+import { getArticlesForReader } from "@/lib/data/reader";
+import { getMessages } from "@/i18n/server";
 import { CATEGORY_ORDER } from "@/lib/data/categories";
 import type { Category } from "@/lib/types";
 import { cn } from "@/lib/cn";
@@ -28,7 +29,7 @@ export default async function NewsPage({
   const activeCategory = isCategory(params.category) ? params.category : undefined;
   const sort = params.sort === "impact" || params.sort === "recent" ? params.sort : "for-you";
 
-  const [allArticles, prefs] = await Promise.all([getArticlesSorted(), getUserPreferences()]);
+  const [allArticles, prefs, m] = await Promise.all([getArticlesForReader(), getUserPreferences(), getMessages()]);
   let articles = allArticles;
   if (activeCategory) {
     articles = articles.filter((a) => a.category === activeCategory);
@@ -43,10 +44,10 @@ export default async function NewsPage({
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-6">
         <h1 className="text-[22px] font-semibold tracking-tight text-ink-950 sm:text-2xl">
-          News
+          {m.news.title}
         </h1>
         <p className="mt-1 text-[13.5px] text-ink-400">
-          What already happened — ranked by what matters.
+          {m.news.subtitle}
         </p>
       </div>
 
@@ -71,7 +72,7 @@ export default async function NewsPage({
                   sort === option ? "bg-surface text-ink-950" : "text-ink-400 hover:text-ink-600"
                 )}
               >
-                {option === "for-you" ? "For you" : option === "recent" ? "Most recent" : "Highest impact"}
+                {option === "for-you" ? m.news.forYou : option === "recent" ? m.news.recent : m.news.impact}
               </Link>
             );
           })}
@@ -81,14 +82,14 @@ export default async function NewsPage({
       {articles.length === 0 ? (
         <EmptyState
           icon={<Newspaper className="h-5 w-5" strokeWidth={2} />}
-          title="No stories in this category yet"
-          description="Check back soon, or clear the filter to see everything."
+          title={m.news.emptyTitle}
+          description={m.news.emptyText}
           action={
             <Link
               href="/news"
               className="text-[13px] font-medium text-accent-ink hover:underline"
             >
-              Clear filter
+              {m.news.clearFilter}
             </Link>
           }
         />

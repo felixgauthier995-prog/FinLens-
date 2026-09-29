@@ -29,9 +29,9 @@ export async function getPushState(): Promise<PushState> {
   return sub ? "on" : "off";
 }
 
-export async function enablePush(): Promise<PushState> {
+export async function enablePush(errors: { notConfigured: string; failed: string }): Promise<PushState> {
   const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (!key) throw new Error("Notifications aren't configured yet.");
+  if (!key) throw new Error(errors.notConfigured);
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return permission === "denied" ? "denied" : "off";
   const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
@@ -46,7 +46,7 @@ export async function enablePush(): Promise<PushState> {
   });
   if (!res.ok) {
     await sub.unsubscribe();
-    throw new Error((await res.json().catch(() => ({}))).error || "Couldn't turn on notifications.");
+    throw new Error((await res.json().catch(() => ({}))).error || errors.failed);
   }
   return "on";
 }

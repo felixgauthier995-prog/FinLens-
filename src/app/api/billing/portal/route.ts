@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getStripe, siteUrl } from "@/lib/billing/stripe";
+import { getLocale } from "@/i18n/server";
 
 /** Opens the Stripe customer portal (change plan, card, cancel). */
 export async function POST(request: Request) {
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: data.stripe_customer_id,
+      locale: (await getLocale()) === "fr" ? "fr-CA" : "en",
       return_url: `${siteUrl(request)}/settings`,
     });
     return NextResponse.json({ url: session.url });

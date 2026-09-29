@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/client";
 import { useState } from "react";
 import { supabaseBrowserClient as db } from "@/lib/supabase/client";
 import { AnswerCard } from "./AnswerCard";
@@ -8,6 +9,8 @@ type Answer = {
   sources: { label: string; href: string }[];
 };
 export function AskView() {
+  const { m } = useI18n();
+  const t = m.ask;
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState<
     { question: string; answer: Answer }[]
@@ -22,7 +25,7 @@ export function AskView() {
     try {
       const session = await db?.auth.getSession();
       const token = session?.data.session?.access_token;
-      if (!token) throw new Error("Sign in in Settings to ask a question.");
+      if (!token) throw new Error(t.signIn);
       const response = await fetch("/api/ask", {
         method: "POST",
         headers: {
@@ -33,18 +36,18 @@ export function AskView() {
         signal: AbortSignal.timeout(45000),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Unable to answer.");
+      if (!response.ok) throw new Error(result.error || t.unable);
       setAnswers((prev) => [...prev, { question, answer: result }]);
       setQuestion("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to answer.");
+      setError(e instanceof Error ? e.message : t.unable);
     } finally {
       setBusy(false);
     }
   }
   return (
     <div className="mx-auto max-w-2xl p-6">
-      <h1 className="text-2xl font-semibold">Ask FinLens</h1>
+      <h1 className="text-2xl font-semibold">{t.title}</h1>
       <p className="mt-2 text-sm text-ink-600">
         Answers grounded in recent coverage, with sources and uncertainty. Sign
         in to use your daily allowance.
@@ -59,18 +62,18 @@ export function AskView() {
       </div>
       <form onSubmit={submit} className="flex gap-2">
         <input
-          aria-label="Your question"
+          aria-label={t.label}
           maxLength={1500}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           className="min-w-0 flex-1 rounded border border-border p-3"
-          placeholder="What matters for my watchlist?"
+          placeholder={t.placeholder}
         />
         <button
           disabled={busy || !question.trim()}
           className="rounded bg-ink-950 px-4 text-white disabled:opacity-50"
         >
-          {busy ? "Reading…" : "Ask"}
+          {busy ? t.reading : t.ask}
         </button>
       </form>
       <p role="status" className="mt-3 text-sm">

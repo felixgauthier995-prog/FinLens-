@@ -10,6 +10,7 @@ interface SignalRow {
   horizon: ArticleSignal["horizon"];
   link_level: ArticleSignal["linkLevel"];
   rationale: string;
+  rationale_fr: string | null;
   evidence_quote: string;
   verified: boolean;
   created_at: string;
@@ -29,7 +30,7 @@ export async function getSignalsForArticles(
     const { data, error } = await supabaseServerClient
       .from("article_signals")
       .select(
-        "article_id, ticker, direction, confidence, horizon, link_level, rationale, evidence_quote, verified, created_at"
+        "article_id, ticker, direction, confidence, horizon, link_level, rationale, rationale_fr, evidence_quote, verified, created_at"
       )
       .in("article_id", articleIds);
     if (error) throw error;
@@ -43,6 +44,7 @@ export async function getSignalsForArticles(
         horizon: row.horizon,
         linkLevel: row.link_level,
         rationale: row.rationale,
+        ...(row.rationale_fr ? { rationaleFr: row.rationale_fr } : {}),
         evidenceQuote: row.evidence_quote,
         verified: row.verified,
         createdAt: row.created_at,

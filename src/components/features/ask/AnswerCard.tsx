@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -17,6 +18,7 @@ export function AnswerCard({
   sources: AskSource[];
   isAdviceBoundary?: boolean;
 }) {
+  const { m } = useI18n();
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -29,7 +31,7 @@ export function AnswerCard({
       {isAdviceBoundary && (
         <div className="mb-3 flex items-start gap-2 rounded-md bg-surface px-3 py-2 text-[12px] text-ink-600">
           <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-400" strokeWidth={2} />
-          <span>FinLens shares information, not personalized investment advice.</span>
+          <span>{m.ask.disclaimer}</span>
         </div>
       )}
 
@@ -46,7 +48,7 @@ export function AnswerCard({
         onClick={() => setExpanded((v) => !v)}
         className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-medium text-accent-ink hover:underline"
       >
-        {expanded ? "Show less" : "Show more detail"}
+        {expanded ? m.ask.showLess : m.ask.showMore}
         <ChevronDown
           className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")}
           strokeWidth={2}
@@ -55,7 +57,7 @@ export function AnswerCard({
 
       {sources.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
-          <span className="text-[11px] font-medium text-ink-400">Sources:</span>
+          <span className="text-[11px] font-medium text-ink-400">{m.ask.sources}</span>
           {sources.map((s) => (
             <Link
               key={s.href}

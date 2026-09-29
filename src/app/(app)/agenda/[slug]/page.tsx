@@ -15,7 +15,7 @@ import { formatEventDay, formatEventTime, formatFullDate, formatPrice } from "@/
 import { cn } from "@/lib/cn";
 import { getMessages, getLocale } from "@/i18n/server";
 
-// Rendered on demand (not pre-built) so events published in the Sanity
+// Rendered on demand (not pre-built) so newly imported events
 // Studio show up immediately without a redeploy.
 
 export async function generateMetadata({

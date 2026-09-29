@@ -1,4 +1,3 @@
-import { editorialEvents } from "@/lib/data/editorial";
 import { demoMode } from "@/lib/data/mode";
 import type { Category, EventStatus, EventType, MarketEvent } from "@/lib/types";
 import { makeImpact } from "@/lib/impact";
@@ -385,8 +384,6 @@ export async function getEventsForAsset(ticker: string): Promise<MarketEvent[]> 
 }
 
 export async function getEventsSorted(): Promise<MarketEvent[]> {
- const [automatic,manual]=await Promise.all([automaticRecords(),editorialEvents()]);
- const combined = new Map<string,MarketEvent>();
- for(const item of [...automatic,...manual]) combined.set(item.slug,item);
- return [...combined.values()].sort((a,b)=>Date.parse(a.scheduledAt)-Date.parse(b.scheduledAt));
+  const events = await automaticRecords();
+  return [...events].sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt));
 }

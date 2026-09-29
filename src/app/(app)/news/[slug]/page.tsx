@@ -18,7 +18,7 @@ import { signalsForUser, showsIndirectSignals } from "@/lib/personalization";
 import { Lightbulb } from "lucide-react";
 import { formatFullDate, formatRelativeTime, formatPrice } from "@/lib/format";
 
-// Rendered on demand (not pre-built) so articles published in the Sanity
+// Rendered on demand (not pre-built) so newly imported articles
 // Studio show up immediately without a redeploy.
 
 export async function generateMetadata({

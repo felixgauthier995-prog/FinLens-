@@ -1,14 +1,23 @@
 import type { Metadata, Viewport } from "next";
-
+import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { getLocale } from "@/i18n/server";
 import { I18nProvider } from "@/i18n/client";
 
-const geistSans = { variable: "" };
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-const geistMono = { variable: "" };
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
-const playfairDisplay = { variable: "" };
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "FinLens — What matters in the market today",

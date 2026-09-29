@@ -6,8 +6,10 @@ import { MarketBrief } from "@/components/features/home/MarketBrief";
 import { WatchlistSnapshot } from "@/components/features/home/WatchlistSnapshot";
 import { NewsCard } from "@/components/features/news/NewsCard";
 import { EventRow } from "@/components/features/agenda/EventRow";
-import { getTopStories } from "@/lib/data/news";
+import { getArticlesSorted } from "@/lib/data/news";
 import { getUpcomingEvents } from "@/lib/data/events";
+import { getUserPreferences } from "@/lib/data/preferences";
+import { rankForUser } from "@/lib/personalization";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "long",
@@ -16,10 +18,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 export default async function HomePage() {
-  const [topStories, upcomingEvents] = await Promise.all([
-    getTopStories(4),
+  const [articles, upcomingEvents, prefs] = await Promise.all([
+    getArticlesSorted(),
     getUpcomingEvents(3),
+    getUserPreferences(),
   ]);
+  const forYou = rankForUser(articles, prefs).slice(0, 6);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
@@ -38,8 +42,8 @@ export default async function HomePage() {
 
           <div>
             <SectionHeading
-              eyebrow="Ranked by impact"
-              title="Top Stories"
+              eyebrow="Your stocks and interests first"
+              title="For You"
               action={
                 <Link
                   href="/news"
@@ -51,14 +55,32 @@ export default async function HomePage() {
               }
             />
             <div className="space-y-3">
-              {topStories.map((article) => (
-                <NewsCard key={article.id} article={article} />
+              {forYou.map((article) => (
+                <NewsCard key={article.id} article={article} prefs={prefs} />
               ))}
             </div>
           </div>
         </div>
 
-        <div className="space-y-8">
+        {/* On phones, the user's stocks come first. */}
+        <div className="order-first space-y-8 lg:order-none">
+          <div>
+            <SectionHeading
+              eyebrow="Latest on each"
+              title="Your Stocks"
+              action={
+                <Link
+                  href="/watchlist"
+                  className="flex items-center gap-1 text-[13px] font-medium text-ink-600 hover:text-ink-950"
+                >
+                  Manage
+                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+                </Link>
+              }
+            />
+            <WatchlistSnapshot prefs={prefs} articles={articles} />
+          </div>
+
           <div>
             <SectionHeading
               eyebrow="What's next"
@@ -78,23 +100,6 @@ export default async function HomePage() {
                 <EventRow key={event.id} event={event} />
               ))}
             </div>
-          </div>
-
-          <div>
-            <SectionHeading
-              eyebrow="Personalized"
-              title="Your Watchlist"
-              action={
-                <Link
-                  href="/watchlist"
-                  className="flex items-center gap-1 text-[13px] font-medium text-ink-600 hover:text-ink-950"
-                >
-                  Manage
-                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
-                </Link>
-              }
-            />
-            <WatchlistSnapshot />
           </div>
         </div>
       </div>

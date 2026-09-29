@@ -71,6 +71,8 @@ export interface NewsArticle {
   whyItMatters: string;
   marketImpact: string;
   whatToWatch: string[];
+  /** No-jargon version for beginners. Absent on older/editorial articles. */
+  plainExplanation?: string;
   relatedEventSlug?: string;
   /** Set when AI analysis flagged this as a major company-specific event
    * (product launch, contract, partnership, M&A, earnings, regulatory). */

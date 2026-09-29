@@ -8,6 +8,8 @@ import { CATEGORY_ORDER } from "@/lib/data/categories";
 import type { Category } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { Newspaper } from "lucide-react";
+import { getUserPreferences } from "@/lib/data/preferences";
+import { rankForUser } from "@/lib/personalization";
 
 export const metadata: Metadata = {
   title: "News — FinLens",
@@ -24,14 +26,17 @@ export default async function NewsPage({
 }) {
   const params = await searchParams;
   const activeCategory = isCategory(params.category) ? params.category : undefined;
-  const sort = params.sort === "impact" ? "impact" : "recent";
+  const sort = params.sort === "impact" || params.sort === "recent" ? params.sort : "for-you";
 
-  let articles = await getArticlesSorted();
+  const [allArticles, prefs] = await Promise.all([getArticlesSorted(), getUserPreferences()]);
+  let articles = allArticles;
   if (activeCategory) {
     articles = articles.filter((a) => a.category === activeCategory);
   }
   if (sort === "impact") {
     articles = [...articles].sort((a, b) => b.impactScore.value - a.impactScore.value);
+  } else if (sort === "for-you") {
+    articles = rankForUser(articles, prefs);
   }
 
   return (
@@ -49,13 +54,13 @@ export default async function NewsPage({
         <CategoryChips
           basePath="/news"
           activeCategory={activeCategory}
-          extraParams={{ sort: sort !== "recent" ? sort : undefined }}
+          extraParams={{ sort: sort !== "for-you" ? sort : undefined }}
         />
         <div className="flex shrink-0 items-center gap-1 self-start rounded-md border border-border p-0.5 sm:self-auto">
-          {(["recent", "impact"] as const).map((option) => {
+          {(["for-you", "recent", "impact"] as const).map((option) => {
             const params2 = new URLSearchParams();
             if (activeCategory) params2.set("category", activeCategory);
-            if (option !== "recent") params2.set("sort", option);
+            if (option !== "for-you") params2.set("sort", option);
             const qs = params2.toString();
             return (
               <Link
@@ -66,7 +71,7 @@ export default async function NewsPage({
                   sort === option ? "bg-surface text-ink-950" : "text-ink-400 hover:text-ink-600"
                 )}
               >
-                {option === "recent" ? "Most recent" : "Highest impact"}
+                {option === "for-you" ? "For you" : option === "recent" ? "Most recent" : "Highest impact"}
               </Link>
             );
           })}
@@ -90,7 +95,7 @@ export default async function NewsPage({
       ) : (
         <div className="space-y-3">
           {articles.map((article) => (
-            <NewsCard key={article.id} article={article} />
+            <NewsCard key={article.id} article={article} prefs={prefs} />
           ))}
         </div>
       )}

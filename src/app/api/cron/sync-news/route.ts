@@ -1,3 +1,5 @@
+import { reserveIngestionAiCall } from "@/lib/security/aiBudget";
+import { isCronAuthorized } from "@/lib/security/cron";
 import { reserveQuota } from "@/lib/security/quota";
 import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
@@ -21,14 +23,9 @@ function extractErrorMessage(err: unknown): string {
     .slice(0, 300);
 }
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!supabaseAdminClient) {
@@ -99,10 +96,7 @@ export async function GET(request: Request) {
     for (const article of toAnalyze) {
       try {
         if (
-          !(await reserveQuota(
-            `ai-global:${new Date().toISOString().slice(0, 10)}`,
-            200,
-          ))
+          !(await reserveIngestionAiCall())
         ) {
           itemsSkipped += 1;
           continue;
@@ -125,6 +119,7 @@ export async function GET(request: Request) {
             why_it_matters: analysis.whyItMatters,
             market_impact: analysis.marketImpact,
             what_to_watch: analysis.whatToWatch,
+              plain_explanation: analysis.plainExplanation.trim() || null,
             raw_data: article.rawData,
           },
           { onConflict: "external_id" },

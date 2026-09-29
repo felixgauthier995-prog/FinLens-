@@ -57,3 +57,9 @@ The app is now private: every page in `(app)` requires (1) a signed-in user, (2)
 
 ### App (PWA)
 `src/app/manifest.ts`, icons in `public/`, `apple-icon.png`, standalone display and safe-area padding. On iPhone: Safari → Share → Add to Home Screen. On Android: Chrome offers "Install app". Push notifications are not implemented yet. If the app is later wrapped for the App Store, Apple's in-app purchase rules for digital subscriptions must be reviewed first.
+
+## Frequent imports (migration 0009) and personalization (0010)
+- Vercel Hobby runs crons once a day. Supabase `pg_cron` + `pg_net` now call `/api/cron/sync-news` every 15 min, `sync-company-events` twice an hour and `sync-asset-prices` hourly on US market days (UTC). Daily jobs stay on Vercel. Cron routes accept `Bearer CRON_SECRET` (Vercel) or `Bearer SCHEDULER_SECRET` (Supabase) — see `src/lib/security/cron.ts`.
+- Secrets are in Supabase Vault, never in the repo: `finlens_scheduler_secret` (same value as `SCHEDULER_SECRET` in Vercel, ≥16 chars) and `finlens_site_url`. Until both exist the scheduled calls fail harmlessly. Check runs with `select * from cron.job_run_details order by start_time desc limit 20;`.
+- AI budgets are separate: imports `ai-ingest` (default 150/day, env `AI_INGEST_DAILY_MAX`), Ask `ai-ask` (default 300/day, env `AI_ASK_DAILY_MAX`), plus 20 Ask questions per user per day.
+- Personalization uses the questionnaire: "For you" ranking on Home and News (own stocks > sectors > market impact, fading over ~2 days), "Your Stocks" with the latest story/signal per ticker, a no-jargon "In plain words" explanation for beginners/intermediates (`articles.plain_explanation`), indirect signals shown only to advanced or aggressive profiles, risks first for cautious users, and Ask FinLens adapting its vocabulary to the user's level.

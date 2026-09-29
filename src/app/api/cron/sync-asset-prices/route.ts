@@ -1,3 +1,4 @@
+import { isCronAuthorized } from "@/lib/security/cron";
 import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { fetchQuotes } from "@/lib/providers/prices/fmp";
@@ -5,14 +6,9 @@ import { ASSETS } from "@/lib/data/assets";
 
 export const dynamic = "force-dynamic";
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!supabaseAdminClient) {

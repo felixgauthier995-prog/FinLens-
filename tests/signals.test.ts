@@ -86,6 +86,7 @@ test("malformed signals are rejected by validation", () => {
     marketImpact: "z",
     whatToWatch: [],
     affectedAssets: ["NVDA"],
+    plainExplanation: "Plain words.",
   };
   assert.doesNotThrow(() => validateAnalysis({ ...base, signals: [sig({})] }, ["NVDA"]));
   assert.throws(() => validateAnalysis({ ...base, signals: [sig({ direction: "up" as never })] }, ["NVDA"]));

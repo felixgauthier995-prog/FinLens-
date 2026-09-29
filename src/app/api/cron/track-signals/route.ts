@@ -1,3 +1,4 @@
+import { isCronAuthorized } from "@/lib/security/cron";
 import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { reserveQuota } from "@/lib/security/quota";
@@ -22,11 +23,6 @@ const WINDOWS = [
 const MAX_TICKERS_PER_RUN = 40;
 const MAX_ROWS_PER_WINDOW = 200;
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 interface PendingRow {
   id: number;
@@ -34,7 +30,7 @@ interface PendingRow {
 }
 
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!supabaseAdminClient) {

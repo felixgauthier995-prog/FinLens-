@@ -1,70 +1,65 @@
 "use client";
-import { useEffect, useState } from "react";
-import { supabaseBrowserClient as db } from "@/lib/supabase/client";
-export function AccountPanel() {
-  const [email, setEmail] = useState("");
-  const [user, setUser] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
+import { useState } from "react";
+
+export interface AccountSummary {
+  email: string;
+  status: string | null;
+  planInterval: string | null;
+  trialEnd: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+function formatDate(iso: string | null) {
+  return iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : null;
+}
+
+function planLine(a: AccountSummary): string {
+  const plan = a.planInterval === "year" ? "Yearly plan" : a.planInterval === "month" ? "Monthly plan" : "Plan";
+  if (a.status === "trialing") return `Free trial · ends ${formatDate(a.trialEnd) ?? "soon"}`;
+  if (a.cancelAtPeriodEnd) return `${plan} · ends ${formatDate(a.currentPeriodEnd)}`;
+  if (a.status === "past_due") return `${plan} · payment issue, please update your card`;
+  return `${plan} · renews ${formatDate(a.currentPeriodEnd) ?? ""}`;
+}
+
+export function AccountPanel({ account }: { account: AccountSummary }) {
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    if (!db) return;
-    db.auth.getUser().then(({ data }) => setUser(data.user?.email ?? null));
-    const { data } = db.auth.onAuthStateChange((_e, s) =>
-      setUser(s?.user.email ?? null),
-    );
-    return () => data.subscription.unsubscribe();
-  }, []);
-  async function login(e: React.FormEvent) {
-    e.preventDefault();
-    if (!db) return;
+  const [message, setMessage] = useState("");
+
+  async function openBilling() {
     setBusy(true);
-    const { error } = await db.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin + "/settings" },
-    });
-    setMessage(
-      error ? error.message : "Check your email for your sign-in link.",
-    );
-    setBusy(false);
+    setMessage("");
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "Couldn't open billing.");
+      window.location.href = data.url;
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Couldn't open billing.");
+      setBusy(false);
+    }
   }
+
   return (
-    <section className="rounded-xl border border-border p-5 mb-6">
-      <h2 className="font-semibold">Your account</h2>
-      {!db ? (
-        <p>Account service is not configured.</p>
-      ) : user ? (
-        <>
-          <p className="my-3">{user}</p>
-          <button
-            onClick={async () => {
-              const { error } = await db!.auth.signOut();
-              setMessage(error ? error.message : "Signed out.");
-            }}
-            className="underline"
-          >
+    <section className="mb-6 rounded-xl border border-border p-5">
+      <h2 className="font-semibold text-ink-950">Your account</h2>
+      <p className="mt-2 text-[14px] text-ink-800">{account.email}</p>
+      <p className="mt-1 text-[13px] text-ink-600">{planLine(account)}</p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          onClick={openBilling}
+          disabled={busy}
+          className="rounded-md border border-border-strong px-3.5 py-2 text-[13px] font-medium text-ink-950 hover:bg-surface disabled:text-ink-300"
+        >
+          {busy ? "Opening…" : "Manage subscription"}
+        </button>
+        <form action="/auth/signout" method="post">
+          <button className="rounded-md px-3.5 py-2 text-[13px] font-medium text-ink-600 hover:bg-surface hover:text-ink-950">
             Sign out
           </button>
-        </>
-      ) : (
-        <form onSubmit={login} className="mt-3 flex flex-wrap gap-3">
-          <input
-            aria-label="Email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="rounded border p-2"
-          />
-          <button
-            disabled={busy}
-            className="rounded bg-ink-950 text-white px-4 py-2"
-          >
-            {busy ? "Sending…" : "Email me a sign-in link"}
-          </button>
         </form>
-      )}
-      <p role="status" className="mt-2 text-sm">
+      </div>
+      <p role="status" className="mt-2 text-[13px] text-negative">
         {message}
       </p>
     </section>

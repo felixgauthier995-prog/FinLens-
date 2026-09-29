@@ -38,3 +38,22 @@ Per-company "good or bad news for this company" signals, extracted from each ana
 - Track record: `/api/cron/track-signals` (weekdays 21:00 UTC) fills 1d / 1w / 1m prices. Late snapshots beyond a grace period are skipped rather than distorting results. Max 40 tickers per run (FMP free tier). A signal "matches" when the stock beat (positive) or lagged (negative) SPY over the window. The 1-week hit rate is shown once 20 signals are measured; all measured signals count, wrong ones included.
 - UI: arrows on news cards, full detail (reason, confidence, horizon, quote, direct/indirect, reviewed) on the article page, with a not-investment-advice notice.
 - Activation: apply `0007_article_signals.sql` in the Supabase SQL Editor. Until then the feed works as before (signal reads fail silently, writes are logged and skipped).
+
+## Accounts and paywall (migration 0008)
+The app is now private: every page in `(app)` requires (1) a signed-in user, (2) a completed questionnaire, (3) a Stripe subscription in `trialing`, `active` or `past_due`. Missing any step redirects to `/welcome`, `/onboarding` or `/subscribe`. Ask FinLens checks the subscription server-side too. Public pages: `/welcome`, `/login`, `/auth/callback`.
+- Sessions: Supabase auth now uses cookies (`@supabase/ssr`) so the server knows who is signed in. `src/proxy.ts` only refreshes the session; access is decided in `src/lib/account.ts`. Existing signed-in browsers will need to sign in once more.
+- Questionnaire: experience, goal, sectors, risk, then 1–15 stocks (suggested from sectors) saved to `user_watchlists`. Answers in `profiles` (user can read/write own row).
+- Payments: Stripe Checkout, 7-day trial once per user, monthly and yearly prices. `subscriptions` is readable by its owner but only written by the server (webhook and post-checkout sync), so nobody can grant themselves access. Customer portal from Settings → Manage subscription.
+
+### Activation
+1. Supabase SQL Editor: run `0008_accounts_subscriptions.sql`.
+2. Supabase → Authentication → URL Configuration: Site URL = production URL; add `https://<your-domain>/auth/callback` (and `http://localhost:3000/auth/callback`) to Redirect URLs.
+3. Stripe (start in Test mode): create product "FinLens" with two recurring prices, $7.99/month and $59.99/year. Copy both price IDs.
+4. Stripe → Developers → Webhooks: endpoint `https://<your-domain>/api/stripe/webhook`, events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`. Copy the signing secret.
+5. Stripe → Settings → Billing → Customer portal: enable it (cancel, switch plan, update card). Settings → Customer emails: turn on trial-ending reminders.
+6. Vercel env vars: `NEXT_PUBLIC_SITE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`. Redeploy.
+7. Your own access: create a 100%-off coupon + promotion code in Stripe (checkout accepts promo codes), or use test mode with card 4242 4242 4242 4242.
+8. Switch to live keys/prices only after testing the full flow: sign up → questionnaire → trial → Settings → cancel.
+
+### App (PWA)
+`src/app/manifest.ts`, icons in `public/`, `apple-icon.png`, standalone display and safe-area padding. On iPhone: Safari → Share → Add to Home Screen. On Android: Chrome offers "Install app". Push notifications are not implemented yet. If the app is later wrapped for the App Store, Apple's in-app purchase rules for digital subscriptions must be reviewed first.

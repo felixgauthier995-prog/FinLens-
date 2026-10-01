@@ -53,6 +53,12 @@ export function NewsCard({
         </h3>
         <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-600">{text}</p>
 
+        {article.whyItMatters && article.whyItMatters !== text && (
+          <div className="mt-3 border-l-2 border-border pl-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-accent-ink">{locale === "fr" ? "Pourquoi ça compte · Analyse" : "Why it matters · Analysis"}</p>
+            <p className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-ink-600">{article.whyItMatters}</p>
+          </div>
+        )}
         <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3">
           {signals.length ? (
             <SignalChips signals={signals} />

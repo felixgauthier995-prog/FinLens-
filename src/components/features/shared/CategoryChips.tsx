@@ -7,10 +7,12 @@ import { cn } from "@/lib/cn";
 import type { Category } from "@/lib/types";
 
 export function CategoryChips({
+  compact = false,
   basePath,
   activeCategory,
   extraParams,
 }: {
+  compact?: boolean;
   basePath: string;
   activeCategory?: Category;
   /** Additional query params to preserve when switching category (e.g. sort, view). */
@@ -30,11 +32,11 @@ export function CategoryChips({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={cn("flex min-w-0 items-center gap-2", compact ? "max-w-full overflow-x-auto whitespace-nowrap pb-1 sm:flex-wrap sm:whitespace-normal sm:overflow-visible" : "flex-wrap")}>
       <Link
         href={hrefFor("all")}
         className={cn(
-          "rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+          "shrink-0 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors",
           !activeCategory
             ? "border-ink-950 bg-ink-950 text-white"
             : "border-border text-ink-600 hover:bg-surface"
@@ -47,7 +49,7 @@ export function CategoryChips({
           key={category}
           href={hrefFor(category)}
           className={cn(
-            "rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+            "shrink-0 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors",
             activeCategory === category
               ? "border-ink-950 bg-ink-950 text-white"
               : "border-border text-ink-600 hover:bg-surface"

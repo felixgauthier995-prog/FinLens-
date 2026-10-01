@@ -71,7 +71,7 @@ export type RelevanceReason =
 /** Why an article is relevant to this user (shown as a small label). */
 export function relevanceReason(article: NewsArticle, prefs: UserPreferences): RelevanceReason {
   const mine = new Set(prefs.tickers);
-  const signalTicker = article.signals?.find((s) => mine.has(s.ticker))?.ticker;
+  const signalTicker = signalsForUser(article.signals ?? [], prefs).find((s) => mine.has(s.ticker))?.ticker;
   const ticker = signalTicker ?? article.affectedAssets.find((t) => mine.has(t));
   if (ticker) return { kind: "stock", ticker };
   if (categoriesForSectors(prefs.sectors).has(article.category))
@@ -86,10 +86,12 @@ export function relevanceReason(article: NewsArticle, prefs: UserPreferences): R
 export function relevanceScore(article: NewsArticle, prefs: UserPreferences, now = Date.now()): number {
   const mine = new Set(prefs.tickers);
   let score = article.impactScore.value; // 1–10
-  if (article.signals?.some((s) => mine.has(s.ticker))) score += 12;
+  if (signalsForUser(article.signals ?? [], prefs).some((s) => mine.has(s.ticker))) score += 12;
   else if (article.affectedAssets.some((t) => mine.has(t))) score += 8;
   if (categoriesForSectors(prefs.sectors).has(article.category)) score += 4;
-  const ageHours = Math.max(0, (now - Date.parse(article.publishedAt)) / 3600000);
+  const published = Date.parse(article.publishedAt);
+  if (!Number.isFinite(published) || published > now + 300000) return 0;
+  const ageHours = Math.max(0, (now - published) / 3600000);
   return score * Math.pow(0.5, ageHours / 48);
 }
 

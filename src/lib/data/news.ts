@@ -1,4 +1,6 @@
 import { demoMode } from "@/lib/data/mode";
+import { COMPANY_EVENT_TYPES } from "@/lib/types";
+import { rankForUser, NO_PREFERENCES } from "@/lib/personalization";
 import type { Category, ImpactDirection, NewsArticle } from "@/lib/types";
 import { makeImpact } from "@/lib/impact";
 import { hoursAgo, minutesAgo } from "@/lib/data/dates";
@@ -22,6 +24,7 @@ interface SupabaseArticleRow {
   what_to_watch: string[] | null;
   plain_explanation: string | null;
   fr: NewsArticle["fr"] | null;
+  company_event_type: NewsArticle["companyEventType"] | null;
 }
 
 export function slugifyArticle(title: string, id: number): string {
@@ -35,6 +38,7 @@ export function slugifyArticle(title: string, id: number): string {
 
 function mapSupabaseArticle(row: SupabaseArticleRow): NewsArticle {
   return {
+    ...(row.company_event_type && COMPANY_EVENT_TYPES.includes(row.company_event_type) ? { companyEventType: row.company_event_type } : {}),
     id: String(row.id),
     slug: slugifyArticle(row.title, row.id),
     title: row.title,
@@ -387,7 +391,7 @@ async function automaticRecords(): Promise<NewsArticle[]> {
     const { data, error } = await supabaseServerClient
       .from("articles")
       .select(
-        "id, title, summary, url, source_name, published_at, tickers, category, impact_score, impact_direction, what_happened, why_it_matters, market_impact, what_to_watch, plain_explanation, fr"
+        "id, title, summary, url, source_name, published_at, tickers, category, impact_score, impact_direction, what_happened, why_it_matters, market_impact, what_to_watch, plain_explanation, fr, company_event_type"
       )
       .order("published_at", { ascending: false })
       .limit(100);
@@ -403,14 +407,14 @@ async function automaticRecords(): Promise<NewsArticle[]> {
       return articleSignals?.length ? { ...article, signals: articleSignals } : article;
     });
   } catch (err) {
-    console.error("[news] Supabase fetch failed, falling back to mock data:", err);
+    console.error("[news] Supabase fetch failed:", err);
     return demoMode ? fallbackArticlesSorted() : [];
   }
 }
 
 export async function getTopStories(limit = 5): Promise<NewsArticle[]> {
   const articles = await getArticlesSorted();
-  return [...articles].sort((a, b) => b.impactScore.value - a.impactScore.value).slice(0, limit);
+  return rankForUser(articles, NO_PREFERENCES).slice(0, limit);
 }
 
 export async function getArticlesForAsset(ticker: string): Promise<NewsArticle[]> {

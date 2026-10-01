@@ -102,3 +102,25 @@ test("cron routes accept either secret, and nothing else", () => {
     if (prev.s === undefined) delete process.env.SCHEDULER_SECRET;
   }
 });
+
+ test("hidden indirect signals do not personalize the feed", () => {
+  const indirect = article({ signals: [signal({ linkLevel: "chain" })] });
+  assert.equal(relevanceReason(indirect, me), null);
+  assert.deepEqual(rankForUser([article({ id: "fresh", impactScore: { value: 6, level: "moderate" } }), indirect], me, NOW).map(a => a.id), ["fresh", "1"]);
+});
+
+test("invalid timestamps cannot outrank dated coverage", () => {
+  assert.equal(rankForUser([article({ id: "invalid", publishedAt: "bad date" }), article({ id: "dated" })], me, NOW)[0].id, "dated");
+});
+
+import { filterNews } from "../src/lib/news-feed";
+test("news filters combine topic, time and watchlist without mutating data", () => {
+  const records = [article({ title: "NVIDIA dévoile une puce", affectedAssets: ["NVDA"] }), article({ id: "old", title: "NVIDIA", affectedAssets: ["NVDA"], publishedAt: hoursAgo(48) })];
+  assert.equal(filterNews(records, { q: "nvidia devoile", scope: "watchlist", period: "24h" }, me, NOW).length, 1);
+  assert.equal(records.length, 2);
+  assert.equal(filterNews(records, { q: "", scope: "watchlist", period: "all" }, NO_PREFERENCES, NOW).length, 0);
+});
+test("company focus requires a catalyst classification or a direct company signal", () => {
+  const records = [article({ id: "macro" }), article({ id: "launch", companyEventType: "product-launch" }), article({ id: "direct", signals: [signal({})] }), article({ id: "indirect", signals: [signal({ linkLevel: "chain" })] })];
+  assert.deepEqual(filterNews(records, { q: "", scope: "companies", period: "all" }, me, NOW).map(a => a.id), ["launch", "direct"]);
+});
